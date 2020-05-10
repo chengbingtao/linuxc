@@ -24,16 +24,16 @@ int main(int argc,char** argv)
 	//iRet = inet_aton(INADDR_ANY);
 	bzero(&sockAddr,sizeof(sockAddr));
 	sockAddr.sin_family=AF_INET;
-	//sockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	sockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	//sockAddr.sin_addr.s_addr = htonl("127.0.0.1");
 	//iRet=inet_aton("192.168.31.106",&inAddr);
-	iRet=inet_aton("127.0.0.1",&inAddr);
+	//iRet=inet_aton("127.0.0.1",&inAddr);
 
-	if(iRet<0){
-		printf("inet_aton return:%d,addr=%d\n",iRet,inAddr.s_addr);
-	}
-	sockAddr.sin_addr = inAddr;
+	//if(iRet<0){
+	//	printf("inet_aton return:%d,addr=%d\n",iRet,inAddr.s_addr);
+	//}
+	//sockAddr.sin_addr = inAddr;
 	sockAddr.sin_port = htons(9527);
 	
 	listenFd = socket(AF_INET,SOCK_STREAM,0);
