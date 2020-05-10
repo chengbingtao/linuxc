@@ -24,6 +24,8 @@ int main(int argc,char** argv)
 	//iRet = inet_aton(INADDR_ANY);
 	bzero(&sockAddr,sizeof(sockAddr));
 	sockAddr.sin_family=AF_INET;
+	
+//服务器程序不必指定ip
 	sockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	//sockAddr.sin_addr.s_addr = htonl("127.0.0.1");
@@ -38,7 +40,7 @@ int main(int argc,char** argv)
 	
 	listenFd = socket(AF_INET,SOCK_STREAM,0);
 	if(listenFd<0){
-
+//		系统调用，需要调用strerror函数，将errno转换为具体信息
 		printf("socket return:%d,err:%s",listenFd,strerror(errno));
 		return -1;
 	}
@@ -49,11 +51,13 @@ int main(int argc,char** argv)
 			return -1;
 		}
 
+	//此处14是参照书中表格，在linux中，表示正在连接和已经连接的队列内连接数量上限是17个
 	iRet = listen(listenFd,14);
 	if(iRet < 0){
 		printf("listen return %d,err:%s",iRet,strerror(errno));
 		return -1;
 	}
+	//len是传入的参数，并非传出的，所以需要传入具体值
 	len=sizeof(cliAddr);
 	while(true)
 	{
