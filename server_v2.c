@@ -102,7 +102,7 @@ int main(int argc,char** argv)
 		printf("accepted\n");
 		memset(c,0,sizeof(c));
 		//iRet = read(connFd,c,3);
-		iRet=Read(connFd,c,2);
+		iRet=Read(connFd,c,10);
 		if(iRet<0){
 			printf("read return %d,recevie:%s\n",iRet,c);
 			printf("error:%s\n",strerror(errno));
