@@ -1,3 +1,21 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include "chengTools.h"
+
+unsigned long get_file_size(const char *filename)  
+{  
+    struct stat buf;  
+    if(stat(filename, &buf)<0)  
+    {  
+        return 0;  
+    }  
+    return (unsigned long)buf.st_size;  
+}
+
+
 int readini(char *filename,char *PName,char *RName,char *result)
 {
 	FILE * fp;

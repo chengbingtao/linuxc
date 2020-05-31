@@ -1,4 +1,5 @@
 #ifndef CHENGTOOLS
 #define CHENGTOOLS
-int readini(char *filename,char *PName,char *RName,char *result)£»
+unsigned long get_file_size(const char *filename) ;
+int readini(char *filename,char *PName,char *RName,char *result);
 #endif
