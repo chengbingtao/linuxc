@@ -3,7 +3,7 @@
 #include "list.h"
 struct lsnr/* 流水库投注内容结构 */
 {
-	long	xszbm,xsqh,lsh,tzs;
+	int	xszbm,xsqh,lsh,tzs;
 	char	cpkey[22];
 	int		dnz,cpbz,tzlx,xsms;
 	int   	dmsl,tmsl;//song+
@@ -14,7 +14,7 @@ struct lsnr/* 流水库投注内容结构 */
 
 struct fsnr/* 复式库投注内容结构 */
 {
-	long	xszbm,xsqh,lsh,tzs;
+	int	xszbm,xsqh,lsh,tzs;
 	char	cpkey[22];
 	int		dnz,cpbz,tzlx,xsms;
 	int		dmsl,tmsl;
@@ -25,7 +25,7 @@ struct fsnr/* 复式库投注内容结构 */
 
 //与复式结构相同，仅dnz改为条数
 struct piao{
-	long	xszbm,xsqh,lsh,tzs;
+	int	xszbm,xsqh,lsh,tzs;
 	char	cpkey[22];
 	int		tiaoshu,cpbz,tzlx,xsms;
 	int		dmsl,tmsl;

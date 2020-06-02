@@ -45,14 +45,35 @@ long getTicket(char* FileName,List *listRet)
 	int zhushu=0;
 	struct	lsnr sthout1;
 	struct	fsnr sthout2;
-	struct  piao strPiao;
+	struct  piao *strPiao;
+	
+	
+	FileLength = get_file_size(FileName);
 	//流水库文件读取并处理
 	if(strstr(FileName,"ls") || strstr(FileName,"LS") ){
 		lsOrFs=1;
+		if((FileLength%sizeof(sthout1))!=0) 
+		{ 
+			printf("%s%s:%d:%d\n","Error length of ",FileName,FileLength,sizeof(sthout1));
+			//printf("%s\n",err_text);
+			//Deal_Err(err_text);
+			return -2; 
+		}
+		fl=FileLength/sizeof(sthout1);		/*流水库文件单条记录长度是80*/
+		//printf("The file length of %s is %ld\n",FileName,FileLength);
 	}
 	//复式库文件读取并处理
 	if(strstr(FileName,"fs") || strstr(FileName,"FS") ){
 		lsOrFs=2;
+		if((FileLength%sizeof(sthout2))!=0) 
+		{ 
+			printf("%s%s:%d:%d\n","Error length of ",FileName,FileLength,sizeof(sthout2));
+			//printf("%s\n",err_text);
+			//Deal_Err(err_text);
+			return -2; 
+		}
+		fl=FileLength/sizeof(sthout2);		/*流水库文件单条记录长度是80*/
+		//printf("The file length of %s is %ld\n",FileName,FileLength);
 	}
 	
 	if(lsOrFs== -1) return -1;
@@ -61,18 +82,11 @@ long getTicket(char* FileName,List *listRet)
 	//if(FileNo==-1) 
 	//	return -6;
 	//FileLength=filelength(FileNo);		/*读取文件长度*/
-	FileLength = get_file_size(FileName);
-	if((FileLength%sizeof(sthout1))!=0) 
-	{ 
-		printf("%s%s\n","Error length of ",FileName);
-		//printf("%s\n",err_text);
-		//Deal_Err(err_text);
-		return -2; 
-	}
-	close(FileNo);
+	
+	
+	///close(FileNo);
 		
-	fl+=FileLength/sizeof(sthout1);		/*流水库文件单条记录长度是80*/
-	printf("The file length of %s is %ld\n",FileName,FileLength);
+	
 	
 	FileLength=fl;
 	
@@ -81,56 +95,78 @@ long getTicket(char* FileName,List *listRet)
 	
 	if((lsk = fopen(FileName,"rb"))==NULL) return -3;
 	for(ttt=0;ttt<FileLength;ttt++){
-			memset(&strPiao,0,sizeof(struct piao));
+			
 	
 			if(lsOrFs==1){
 				memset(&sthout1,0,sizeof(sthout1));
 				fread(&sthout1,sizeof(sthout1),1,lsk);
-				
+				//printf("lsk cpk:%s\n",sthout1.cpkey);
 			}	
 			if(lsOrFs==2){
 				memset(&sthout2,0,sizeof(sthout2));
 				fread(&sthout2,sizeof(sthout2),1,lsk);
-				
+				//printf("fsk cpk:%s\n",sthout2.cpkey);
 				//strcpy(keyZhu,sthout2.cpkey);
 			}
 			
 			
 			if(ttt > 0){
-				if(strcmp(strPiao.cpkey,sthout2.cpkey) != 0){
-					//票结构体
-					strPiao.tiaoshu = zhushu;
-					zhushu=0;
-					//记录该票到存储结构
-					i=list_insert_next(listRet,NULL, &strPiao);
-					if(i==-1) return -4;
-					lastdis++;	
+				if(lsOrFs==1){
+					if(strcmp(strPiao->cpkey,sthout1.cpkey) != 0){
+						//票结构体
+						strPiao->tiaoshu = zhushu;
+						zhushu=0;
+						//记录该票到存储结构
+						//printf("piao key:%s\n",strPiao->cpkey);
+						i=list_insert_next(listRet,NULL, strPiao);
+						if(i==-1) return -4;
+						lastdis++;	
+					}
 				}
+				if(lsOrFs==2){
+					if(strcmp(strPiao->cpkey,sthout2.cpkey) != 0){
+						//票结构体
+						strPiao->tiaoshu = zhushu;
+						zhushu=0;
+						//记录该票到存储结构
+						//printf("piao key:%s\n",strPiao->cpkey);
+						i=list_insert_next(listRet,NULL, strPiao);
+						if(i==-1) return -4;
+						lastdis++;	
+					}	
+				}
+				
 			}
 			
 			if(lsOrFs==1){
 					memset(keyZhu,0,sizeof(keyZhu));
+					strPiao = malloc(sizeof(struct piao));
+					memset(strPiao,0,sizeof(struct piao));
 					//strcpy(keyZhu,sthout1.cpkey);
-					if(-1 == lscopy(&sthout1,&strPiao)){
+					if(-1 == lscopy(&sthout1,strPiao)){
 						//记录一下，但不需要停
 						
-					} ;
+					} 
 			}
 			
 			if(lsOrFs == 2){
 					memset(keyZhu,0,sizeof(keyZhu));
-					if(-1 == fscopy(&sthout2,&strPiao)){
+					strPiao = malloc(sizeof(struct piao));
+					memset(strPiao,0,sizeof(struct piao));
+					if(-1 == fscopy(&sthout2,strPiao)){
 						//记录一下
 					}
+					
 			}
 			//注数
 			zhushu++;		
 		}
 		//最后一票
-		strPiao.tiaoshu = zhushu;
+		strPiao->tiaoshu = zhushu;
 		
 		//记录该票到存储结构
-		i=list_insert_next(listRet,NULL, &strPiao);			
+		//printf("piao key:%s\n",strPiao->cpkey);
+		i=list_insert_next(listRet,NULL, strPiao);			
 		if(i==-1) return -5;	
 		lastdis++;			
 		if(lsk )fclose(lsk);

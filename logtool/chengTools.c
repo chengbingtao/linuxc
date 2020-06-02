@@ -10,6 +10,7 @@ unsigned long get_file_size(const char *filename)
     struct stat buf;  
     if(stat(filename, &buf)<0)  
     {  
+    	printf("get_file_size error\n");
         return 0;  
     }  
     return (unsigned long)buf.st_size;  
