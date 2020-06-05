@@ -42,6 +42,7 @@ long getTicket(char* FileName,List *listRet)
 	int		FileNo;
 	FILE	*lsk=NULL;
 	int lsOrFs=-1;
+	int tiaoshu=0;
 	int zhushu=0;
 	struct	lsnr sthout1;
 	struct	fsnr sthout2;
@@ -77,16 +78,7 @@ long getTicket(char* FileName,List *listRet)
 	}
 	
 	if(lsOrFs== -1) return -1;
-	
-	//FileNo=open(FileName,0,0);
-	//if(FileNo==-1) 
-	//	return -6;
-	//FileLength=filelength(FileNo);		/*读取文件长度*/
-	
-	
-	///close(FileNo);
-		
-	
+
 	
 	FileLength=fl;
 	
@@ -114,7 +106,9 @@ long getTicket(char* FileName,List *listRet)
 				if(lsOrFs==1){
 					if(strcmp(strPiao->cpkey,sthout1.cpkey) != 0){
 						//票结构体
-						strPiao->tiaoshu = zhushu;
+						strPiao->tiaoshu = tiaoshu;
+						strPiao->tzs = zhushu;
+						tiaoshu=0;
 						zhushu=0;
 						//记录该票到存储结构
 						//printf("piao key:%s\n",strPiao->cpkey);
@@ -126,7 +120,9 @@ long getTicket(char* FileName,List *listRet)
 				if(lsOrFs==2){
 					if(strcmp(strPiao->cpkey,sthout2.cpkey) != 0){
 						//票结构体
-						strPiao->tiaoshu = zhushu;
+						strPiao->tiaoshu = tiaoshu;
+						strPiao->tzs = zhushu;
+						tiaoshu=0;
 						zhushu=0;
 						//记录该票到存储结构
 						//printf("piao key:%s\n",strPiao->cpkey);
@@ -146,7 +142,8 @@ long getTicket(char* FileName,List *listRet)
 					if(-1 == lscopy(&sthout1,strPiao)){
 						//记录一下，但不需要停
 						
-					} 
+					}
+					zhushu += sthout1.tzs; 
 			}
 			
 			if(lsOrFs == 2){
@@ -156,13 +153,14 @@ long getTicket(char* FileName,List *listRet)
 					if(-1 == fscopy(&sthout2,strPiao)){
 						//记录一下
 					}
-					
+					zhushu += sthout2.tzs;
 			}
-			//注数
-			zhushu++;		
+			//条数
+			tiaoshu++;	
+				
 		}
 		//最后一票
-		strPiao->tiaoshu = zhushu;
+		strPiao->tiaoshu = tiaoshu;
 		
 		//记录该票到存储结构
 		//printf("piao key:%s\n",strPiao->cpkey);

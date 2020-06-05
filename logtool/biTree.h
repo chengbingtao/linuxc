@@ -29,7 +29,9 @@ BiTreeNode *predecessor(BiTreeNode *x);
 //insert tree node
 void insertNode(BiTree *biTree, DataType data);  
 //delete tree node  
-void deleteNode(BiTree *biTree, DataType data);  
+void deleteNode(BiTree *biTree, DataType data); 
+
+void deleteNode2(BiTree *biTree, BiTreeNode* targetNode); 
 //travel the tree with mid order
 void inorderTraversal(BiTree *biTree, void (*visitor)(BiTreeNode *node));  
 #endif  

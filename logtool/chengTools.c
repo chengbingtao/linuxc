@@ -60,3 +60,34 @@ int readini(char *filename,char *PName,char *RName,char *result)
 	fclose(fp);
 	return 0;
 }
+
+
+/*
+struct tm   
+{   
+int tm_sec;//seconds 0-61    
+int tm_min;//minutes 1-59    
+int tm_hour;//hours 0-23    
+int tm_mday;//day of the month 1-31    
+int tm_mon;//months since jan 0-11    
+int tm_year;//years from 1900    
+int tm_wday;//days since Sunday, 0-6    
+int tm_yday;//days since Jan 1, 0-365    
+int tm_isdst;//Daylight Saving time indicator    
+};  
+*/
+
+//return seconds from 1970 ,return YYYY-MM-DD hh:mm:ss using strTime
+time_t getSystemTime( char* strTime){
+	time_t now;
+	struct tm *timeNow;
+	//char fmtTime[20];
+	
+	
+	time(&now);
+	timeNow = localtime(&now);
+	//memset(fmtTime,0,sizeof(fmtTime));
+	sprintf(strTime,"%d-%02d-%02d %02d:%02d:%02d",timeNow->tm_year+1900,timeNow->tm_mon+1,timeNow->tm_mday,timeNow->tm_hour,timeNow->tm_min,timeNow->tm_sec);
+	//strcpy(strTime)
+	return now;
+}

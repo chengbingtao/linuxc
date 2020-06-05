@@ -22,3 +22,6 @@ systemctl status vsftpd.service
 
 更改系统设置
 setsebool -P ftp_home_dir 1
+
+ssh中文乱码
+export LC_ALL=zh_CN.GB2312;export LANG=zh_CN.GB2312

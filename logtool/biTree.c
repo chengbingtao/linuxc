@@ -129,6 +129,44 @@ void deleteNode(BiTree *biTree, DataType data) {
 } 
 
 
+void deleteNode2(BiTree *biTree, BiTreeNode* targetNode) {  
+    BiTreeNode  *x, *y;  
+  
+    //targetNode = search(biTree, data);  
+    if (targetNode == NULL) return;  
+    if (targetNode->left == NULL || targetNode->right == NULL) {  
+        y = targetNode;  
+    } else {  
+        y = successor(targetNode);  
+    }  
+  
+    if (y->left != NULL) {  
+        x = y->left;  
+    } else {  
+        x = y->right;  
+    }  
+  
+    if (x != NULL) {  
+        x->parent = y->parent;  
+    }  
+  
+    if (y->parent == NULL) {  
+        *biTree = x;  
+    } else {  
+        if (y->parent->right == y) {  
+            y->parent->right = x;  
+        } else {  
+            y->parent->left = x;  
+        }  
+    }  
+  
+    if (y != targetNode) {  
+        strcpy(targetNode->data , y->data);  
+    }   
+    free(y);  
+} 
+
+
 void inorderTraversal(BiTree *biTree, void (*visitor)(BiTreeNode *node)) {  
     BiTreeNode *curNode;  
   
