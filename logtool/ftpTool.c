@@ -156,15 +156,16 @@ int download(CURL *curlhandle, const char * remotepath, const char * localpath, 
 int downloadsimple(char*user,char*pwd,char* ftp_path, char* local_path)   
 {  
     //CURL *curlhandle = NULL;  
+    int i = 0;
     CURL *curldwn = NULL;  
     curl_global_init(CURL_GLOBAL_ALL);  
    // curlhandle = curl_easy_init();  
     curldwn = curl_easy_init();  
     //upload(curlhandle, "ftp://192.168.0.185/a/success", "D:/abc.jpg", 1, 3);  
     //download(curldwn, "ftp://192.168.0.185/a/success", "D:/abc1.jpg", 1, 3);  
-    download(curldwn, ftp_path, local_path, 1, 3,user,pwd);  
+    i = download(curldwn, ftp_path, local_path, 1, 3,user,pwd);  
     //curl_easy_cleanup(curlhandle);  
     curl_easy_cleanup(curldwn);  
     curl_global_cleanup();  
-    return 0;  
+    return i;  
 } 

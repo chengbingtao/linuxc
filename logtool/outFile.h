@@ -1,6 +1,7 @@
 #ifndef OUTFILE
 #define OUTFILE
 #include "list.h"
+#include "biTree.h"
 struct lsnr/* 流水库投注内容结构 */
 {
 	int	xszbm,xsqh,lsh,tzs;
@@ -36,6 +37,6 @@ struct piao{
 };
 
 long getTicket(char* FileName,List *listRet);
-
-
+unsigned long compareTicket(char* FileName,BiTree *keyTree);
+unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port);
 #endif

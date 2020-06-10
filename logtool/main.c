@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include "chengTools.h"
 #include "biTree.h"
 #include "ftpTool.h"
 #include "zcSend.h"
@@ -15,6 +16,7 @@ typedef struct _logData{
 	char lsh[20];
 	char cpkey[22];
 	} StrLogData;
+
 
 
 void destroyPiao(void* data){
@@ -39,6 +41,7 @@ void destroyLog(void* data){
 //return	:if success the number of transed files;if no file trans,return 0;error -n 
 int getOutFiles(char* ftpPath,char* localPath)
 {
+	
 return 0;
 }
 
@@ -229,7 +232,58 @@ void compareLogRecords(List* pList4020,List* pList4030,char* srcFileName,char* t
 	//printf("function compareTree : %d rows read to delete tree\n",ul_1);
 }
 
+unsigned long PutKeyToTree(BiTree* pBiTree,char* keyFile)
+{
+	FILE* fpKey=NULL;
+	char cLine[18];
+	unsigned long ul_1=0;
+	fpKey = fopen(keyFile,"r");
+	memset(cLine,0,sizeof(cLine));
+	while(fread(cLine,18,1,fpKey) != NULL){
+		insertNode(pBiTree, cLine);
+		memset(cLine,0,sizeof(cLine));
+		ul_1++;
+	}
+	//
+	fclose(fpKey);
+	return ul_1;
+}
 
+//every line of file:23010101|10001|... the last line is md5
+long putXszbmZdhToArray(long* pArray,char* fileName){
+	FILE* fp=NULL;
+	char cLine[1024];
+	char cXszbm[10];
+	char cZdh[10];
+	char *p=NULL,*p2=NULL;
+	long l_1=0,lXszbm,lZdh;
+	fp = fopen(fileName,"r");
+	memset(cLine,0,sizeof(cLine));
+	while(fgets(cLine,sizeof(cLine),fp)){
+		l_1++;
+		p = strchr(cLine,'|');
+		if(p==NULL) break;
+		
+		memset(cXszbm,0,sizeof(cXszbm));
+		strncpy(cXszbm,cLine,(unsigned int)p - (unsigned int)cLine	- 1);
+		
+		p++;
+		p2 = strchr(p,'|');
+		memset(cZdh,0,sizeof(cZdh));
+		strncpy(cZdh,p,(unsigned int)p2 - (unsigned int)p - 1);
+		
+		lXszbm = atol(cXszbm);
+		lZdh = atol(cZdh);
+		pArray[lZdh] = lXszbm;
+		
+		
+		
+		memset(cLine,0,sizeof(cLine));
+		fgets(cLine,sizeof(cLine),fp);
+	}
+	fclose(fp);
+	return l_1;
+}
 
 
 int main(int argc, char* argv[]){
@@ -238,7 +292,7 @@ int main(int argc, char* argv[]){
 	int i;
 	int iRet2=0;
 	char c[10];
-	List listOut;	
+	//List listOut;	
 	ListElement *ple=NULL;
 	long lRet;
 	struct piao *pTicket=NULL;
@@ -250,12 +304,101 @@ int main(int argc, char* argv[]){
 	char retFile[1024];
 	char keyFile[1024];
 	char jvwgFileArray[100][1024];
+	char outFileArray[100][1024];
 	unsigned long recNum;
 	List list4020,list4030;
 	StrLogData *psld=NULL;
+	
+	BiTree biTreeKey=NULL;
+	char ftpPath[1024];
+	char localPath[1024];
+	char ftpUser[128];
+	char ftpPwd[128];	
+	time_t tNow,tYestoday;
+	struct tm *ptmTmp;
+	char cFmtYestodayTzz[20],cFmtToday[20];
+	long xszbmzdh[40000];
 	//BiTree biTree4020;
 	//BiTree biTree4030;
 	//BiTreeNode* btrnTmp;
+	
+	
+	//download yestoday tzz file
+	memset(ftpPath,0,sizeof(ftpPath));
+	readini(PROFILE,"tzz","ftp_path",ftpPath);
+	if(strlen(ftpPath)==0){
+		printf("tzz ftpPath read from ini error:%s\n",PROFILE);
+		return -1;
+	}
+	memset(localPath,0,sizeof(localPath));
+	readini(PROFILE,"tzz","local_path",localPath);
+	if(strlen(localPath)==0){
+		printf("tzz localPath read from ini error:%s\n",PROFILE);
+		return -2;
+	}
+	memset(ftpUser,0,sizeof(ftpUser));
+	readini(PROFILE,"tzz","ftp_user",ftpUser);
+	if(strlen(ftpUser)==0){
+		printf("tzz ftp_user read from ini error:%s\n",PROFILE);
+		return -3;
+	}
+	memset(ftpPwd,0,sizeof(ftpPwd));
+	readini(PROFILE,"tzz","ftp_pwd",ftpPwd);
+	if(strlen(ftpPwd)==0){
+		printf("tzz ftp_pwd read from ini error:%s\n",PROFILE);
+		return -4;
+	}
+	
+	time(&tNow);
+	tNow -= DAY_SECOND;
+	ptmTmp = localtime(&tNow);
+	memset(cFmtYestodayTzz,0,sizeof(cFmtYestodayTzz));
+	//tm_to_datetime(ptmTmp,cFmtYestoday);
+	sprintf(cFmtYestodayTzz,"dn%04d%02d%02d.tzz",ptmTmp->tm_year + 1900 ,ptmTmp->tm_mon + 1, ptmTmp->tm_mday);
+	
+	sprintf(ftpPath,"%s%s",ftpPath,cFmtYestodayTzz);
+	//sprintf(localPath,"%s%s",localPath,cFmtYestodayTzz);
+	//每次覆盖同名文件，如果下载不成功，则沿用之前生成的，仅提示错误
+	sprintf(localPath,"%ss_tzz.txt",localPath);
+	iRet = downloadsimple(ftpUser,ftpPwd,ftpPath,localPath);
+	
+	//填充xszbmzdh数组
+	if(get_file_size(localPath) >0){
+		memset(xszbmzdh,0,sizeof(xszbmzdh));
+		putXszbmZdhToArray(xszbmzdh,localPath);
+	}
+	
+	
+	//download out file
+	memset(ftpPath,0,sizeof(ftpPath));
+	readini(PROFILE,"output","ftp_path",ftpPath);
+	if(strlen(ftpPath)==0){
+		printf("output ftpPath read from ini error:%s\n",PROFILE);
+		return -5;
+	}
+	memset(localPath,0,sizeof(localPath));
+	readini(PROFILE,"output","local_path",localPath);
+	if(strlen(localPath)==0){
+		printf("output localPath read from ini error:%s\n",PROFILE);
+		return -6;
+	}
+	memset(ftpUser,0,sizeof(ftpUser));
+	readini(PROFILE,"output","ftp_user",ftpUser);
+	if(strlen(ftpUser)==0){
+		printf("output ftp_user read from ini error:%s\n",PROFILE);
+		return -7;
+	}
+	memset(ftpPwd,0,sizeof(ftpPwd));
+	readini(PROFILE,"output","ftp_pwd",ftpPwd);
+	if(strlen(ftpPwd)==0){
+		printf("output ftp_pwd read from ini error:%s\n",PROFILE);
+		return -8;
+	}
+	
+	//download namelist file
+	
+	
+	
 	//ftp test ok!
 	//char* ftp_path="ftp://192.168.1.108/Documents/t1.txt";
 	//char* local_path="./t1.txt";
@@ -313,7 +456,6 @@ int main(int argc, char* argv[]){
 	
 	//printf("retFile=%s	keyFile=%s\n",retFile,keyFile);
 	
-	
 	i=0;
 	list_init(&list4020,destroyLog);
 	list_init(&list4030,destroyLog);
@@ -351,6 +493,14 @@ int main(int argc, char* argv[]){
 	list_destroy(&list4020);
 	list_destroy(&list4030);
 	printf("after 4020 len=%d\t4030 len=%d\n",list_size(&list4020),list_size(&list4030));
+	
+	
+	//put key file to tree
+	recNum = PutKeyToTree(&biTreeKey,keyFile);
+	printf("count = %d\tmax key = %s\tmin key = %s\n",recNum,maxImum(&biTreeKey)->data,minImum(&biTreeKey)->data);
+	
+	
+	
 	
 	exit(0);
 
