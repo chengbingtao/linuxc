@@ -285,6 +285,26 @@ long putXszbmZdhToArray(long* pArray,char* fileName){
 	return l_1;
 }
 
+//get output file's names from name list file,and then put them to string array,return num of file's names
+int putOutputNameToArray(char*[] pName,char* fileName){
+	FILE* fp=NULL;
+	char cLine[1024];
+	int i_1=0;
+	
+	fp = fopen(fileName,"r");
+	memset(cLine,0,sizeof(cLine));
+	while(fgets(cLine,sizeof(cLine),fp)){
+		
+		strcpy(pName[i_1],cLine);
+		i_1++;
+		
+		
+		memset(cLine,0,sizeof(cLine));
+		fgets(cLine,sizeof(cLine),fp);
+	}
+	fclose(fp);
+	return i_1;
+} 
 
 int main(int argc, char* argv[]){
 	
@@ -310,7 +330,9 @@ int main(int argc, char* argv[]){
 	StrLogData *psld=NULL;
 	
 	BiTree biTreeKey=NULL;
+	BiTreeNode *pTreeNode=NULL;
 	char ftpPath[1024];
+	char ftpPath2[1024];
 	char localPath[1024];
 	char ftpUser[128];
 	char ftpPwd[128];	
@@ -318,10 +340,8 @@ int main(int argc, char* argv[]){
 	struct tm *ptmTmp;
 	char cFmtYestodayTzz[20],cFmtToday[20];
 	long xszbmzdh[40000];
-	//BiTree biTree4020;
-	//BiTree biTree4030;
-	//BiTreeNode* btrnTmp;
-	
+	char jvwgIp[20];
+	unsigned int jvwgPort=0;
 	
 	//download yestoday tzz file
 	memset(ftpPath,0,sizeof(ftpPath));
@@ -396,8 +416,19 @@ int main(int argc, char* argv[]){
 	}
 	
 	//download namelist file
+	time(&tNow);
+	ptmTmp = localtime(&tNow);
+	memset(cFmtToday,0,sizeof(cFmtToday));
+	//tm_to_datetime(ptmTmp,cFmtYestoday);
+	sprintf(cFmtToday,"out%04d%02d%02d.log",ptmTmp->tm_year + 1900 ,ptmTmp->tm_mon + 1, ptmTmp->tm_mday);
+	sprintf(ftpPath2,"%s%s",ftpPath,cFmtToday);
 	
-	
+	memset(outFileArray,0,sizeof(outFileArray));
+	iRet = putOutputNameToArray(outFileArray,ftpPath2);
+	if(iRet==0){
+		printf("there is not output file in file %s\n",ftpPath2);
+		return -9;
+	}
 	
 	//ftp test ok!
 	//char* ftp_path="ftp://192.168.1.108/Documents/t1.txt";
@@ -456,9 +487,12 @@ int main(int argc, char* argv[]){
 	
 	//printf("retFile=%s	keyFile=%s\n",retFile,keyFile);
 	
-	i=0;
+	//delete keyFile
+	if(0==access(keyFile,F_OK)) remove(keyFile);
+	//i=0;
 	list_init(&list4020,destroyLog);
 	list_init(&list4030,destroyLog);
+	
 	while(true){
 		sprintf(jvwgFile,"%sdebug-%s.%d.log",jvwgPath,fmtDate,i);
 		//printf("%s treated begin!\n",jvwgFile);	
@@ -479,13 +513,12 @@ int main(int argc, char* argv[]){
 		printf("before 4020 len=%d\t4030 len=%d\n",list_size(&list4020),list_size(&list4030));
 		//break;
 		
-		//delete keyFile
-		if(0==access(keyFile,F_OK)) remove(keyFile);
+		
 		
 		compareLogRecords(&list4020,&list4030,retFile,keyFile);
 		printf("middle 4020 len=%d\t4030 len=%d\n",list_size(&list4020),list_size(&list4030));
 		printf("compareLogRecords:%s over!\n",jvwgFile);
-		i++;
+		//i++;
 		
 	
 	}
@@ -499,6 +532,27 @@ int main(int argc, char* argv[]){
 	recNum = PutKeyToTree(&biTreeKey,keyFile);
 	printf("count = %d\tmax key = %s\tmin key = %s\n",recNum,maxImum(&biTreeKey)->data,minImum(&biTreeKey)->data);
 	
+	memset(jvwgIp,0,sizeof(jvwgIp));
+	memset(c,0,sizeof(c));
+	readini(PROFILE,"jvwgfile","ip",jvwgIp);
+	readini(PROFILE,"jvwgfile","port",c);
+	jvwgPort = atoi(c);
+	for(i=0;i<iRet;i++){
+		if(0 < compareTicket(outFileArray[i],&biTreeKey)){
+			sprintf(jvwgFile,"%s_N",outFileArray[i]);
+			iRet2 = sendXkjRz(jvwgFile,jvwgIp,jvwgPort);
+			if(iRet2 <= 0){
+				printf("send jvwg error %s\n",jvwgFile);
+			}
+		}
+		
+		 
+	}
+	
+	//destroy key tree
+	while(pTreeNode = minImum(&biTreeKey)){
+		deleteNode2(&biTreeKey, pTreeNode); 
+	}
 	
 	
 	
