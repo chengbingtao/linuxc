@@ -239,7 +239,7 @@ unsigned long PutKeyToTree(BiTree* pBiTree,char* keyFile)
 	unsigned long ul_1=0;
 	fpKey = fopen(keyFile,"r");
 	memset(cLine,0,sizeof(cLine));
-	while(fread(cLine,18,1,fpKey) != NULL){
+	while(fread(cLine,17,1,fpKey) != NULL){
 		insertNode(pBiTree, cLine);
 		memset(cLine,0,sizeof(cLine));
 		ul_1++;
@@ -286,30 +286,84 @@ long putXszbmZdhToArray(long* pArray,char* fileName){
 }
 
 //get output file's names from name list file,and then put them to string array,return num of file's names
-int putOutputNameToArray(char*[] pName,char* fileName){
+
+int putOutputNameToArray(char pName[][1024],char* fileName){
 	FILE* fp=NULL;
 	char cLine[1024];
-	int i_1=0;
+	int i_1=0,i3;
+	char *p=NULL;
 	
 	fp = fopen(fileName,"r");
 	memset(cLine,0,sizeof(cLine));
 	while(fgets(cLine,sizeof(cLine),fp)){
 		
-		strcpy(pName[i_1],cLine);
-		i_1++;
+		
+		
+		//printf("\ncLine=%s\n",cLine);
+		//if(strncmp(cLine,"***",3) != 0){
+			i3=0;
+			//不用strcpy的原因，cLine读取一行，会把\r\n也读进来,strcpy会复制这些无效字符到文件名中
+			for(p=(char*)cLine;!((char)*p=='\r' || (char)*p == '\n' ||(char)*p =='\0');p++)
+				pName[i_1][i3++] = (char)*p;
+			//strcpy(pName[i_1],cLine);
+			i_1++;
+		//}
+		
 		
 		
 		memset(cLine,0,sizeof(cLine));
-		fgets(cLine,sizeof(cLine),fp);
 	}
 	fclose(fp);
 	return i_1;
 } 
 
+//get dates  from name list file,and then put them to date array,return num of dates
+//in name list file,the last line like :***2010-01-01***2010-01-02***2010-01-03 
+int putDatesToArray(char pName[][11],char* fileName){
+	FILE* fp=NULL;
+	char cLine[1024];
+	char* p=NULL;
+	int i_1=0,i3;
+	//char cDate[50][11];
+	fp = fopen(fileName,"r");
+	//printf("329 filename=%s\tfp=%d\n",fileName,fp);
+	memset(cLine,0,sizeof(cLine));
+	while(fgets(cLine,sizeof(cLine),fp)){
+		i3=0;
+		//printf("cLine:%s\n",cLine);
+			//不用strcpy的原因，cLine读取一行，会把\r\n也读进来,strcpy会复制这些无效字符到文件名中
+			for(p=(char*)cLine;!((char)*p=='\r' || (char)*p == '\n' ||(char)*p =='\0');p++)
+				pName[i_1][i3++] = (char)*p;
+			//strncpy(pName[i_1],cLine,10);
+			//printf("pName:%s\n",pName[i_1]);
+			i_1++;
+		
+		
+		memset(cLine,0,sizeof(cLine));
+	}
+	fclose(fp);
+	
+	/*
+	p = cLine;
+	if(p=strstr(p,"***")) p+=3;
+	while(p){
+		
+		strncpy(pName[i_1],p,10);
+		printf("341 %d:%s\n",i_1,pName[i_1]);
+		i_1++;
+		if(p=strstr(p,"***")) p+=3;
+		
+	}
+	*/
+	return i_1;
+} 
+
+
+
 int main(int argc, char* argv[]){
 	
 	int iRet=0;
-	int i;
+	int i,iDateNum,i2;
 	int iRet2=0;
 	char c[10];
 	//List listOut;	
@@ -325,6 +379,7 @@ int main(int argc, char* argv[]){
 	char keyFile[1024];
 	char jvwgFileArray[100][1024];
 	char outFileArray[100][1024];
+	char dateArray[100][11];
 	unsigned long recNum;
 	List list4020,list4030;
 	StrLogData *psld=NULL;
@@ -334,6 +389,7 @@ int main(int argc, char* argv[]){
 	char ftpPath[1024];
 	char ftpPath2[1024];
 	char localPath[1024];
+	char localPath2[1024];
 	char ftpUser[128];
 	char ftpPwd[128];	
 	time_t tNow,tYestoday;
@@ -382,11 +438,17 @@ int main(int argc, char* argv[]){
 	sprintf(localPath,"%ss_tzz.txt",localPath);
 	iRet = downloadsimple(ftpUser,ftpPwd,ftpPath,localPath);
 	
+	//printf("read tzz file begin!\n");
+	
 	//填充xszbmzdh数组
 	if(get_file_size(localPath) >0){
 		memset(xszbmzdh,0,sizeof(xszbmzdh));
 		putXszbmZdhToArray(xszbmzdh,localPath);
+		printf("================read tzz file over!================\n");
+	}else{
+		printf("================read tzz file error!================\n");
 	}
+	
 	
 	
 	//download out file
@@ -420,15 +482,56 @@ int main(int argc, char* argv[]){
 	ptmTmp = localtime(&tNow);
 	memset(cFmtToday,0,sizeof(cFmtToday));
 	//tm_to_datetime(ptmTmp,cFmtYestoday);
-	sprintf(cFmtToday,"out%04d%02d%02d.log",ptmTmp->tm_year + 1900 ,ptmTmp->tm_mon + 1, ptmTmp->tm_mday);
+	sprintf(cFmtToday,"%04d%02d%02dout.log",ptmTmp->tm_year + 1900 ,ptmTmp->tm_mon + 1, ptmTmp->tm_mday);
 	sprintf(ftpPath2,"%s%s",ftpPath,cFmtToday);
 	
+	sprintf(localPath2,"%s%s",localPath,cFmtToday);
+	downloadsimple(ftpUser,ftpPwd,ftpPath2,localPath2);
+	
+	printf("================download output file name:%s over!================\n",localPath2);
+	
 	memset(outFileArray,0,sizeof(outFileArray));
-	iRet = putOutputNameToArray(outFileArray,ftpPath2);
+	//printf("outFile path=%s\n",localPath2);
+	iRet = putOutputNameToArray(outFileArray,localPath2);
 	if(iRet==0){
-		printf("there is not output file in file %s\n",ftpPath2);
+		printf("there is not output's names in file %s\n",localPath2);
 		return -9;
 	}
+	printf("================read output file name over!================\n" );
+	
+	
+	
+	
+	
+	memset(dateArray,0,sizeof(dateArray));
+	sprintf(cFmtToday,"%04d%02d%02ddate.log",ptmTmp->tm_year + 1900 ,ptmTmp->tm_mon + 1, ptmTmp->tm_mday);
+	sprintf(ftpPath2,"%s%s",ftpPath,cFmtToday);
+	sprintf(localPath2,"%s%s",localPath,cFmtToday);
+	downloadsimple(ftpUser,ftpPwd,ftpPath2,localPath2);
+	iDateNum = putDatesToArray(dateArray,localPath2);
+	printf("================get %d Dates of Qi over!================\n",iDateNum);
+	if(iDateNum ==0){
+		printf("there is not date array in file %s\n",localPath);
+		return -10;
+	}
+	for(i=0;i<iDateNum;i++){
+		printf("date of Qi %d:%s\n",i,dateArray[i]);
+	}
+	
+	
+	//download output file
+	printf("================download output file begin!================\n");
+	for(i=0;i<iRet;i++){
+		sprintf(ftpPath2,"%s%s",ftpPath,outFileArray[i]);
+		sprintf(localPath2,"%s%s",localPath,outFileArray[i]);
+		//printf("ftp-Path:%s\tlocal-path:%s\tftp-user:%s\tftp-pwd:%s\n",ftpPath2,localPath2,ftpUser,ftpPwd);
+		downloadsimple(ftpUser,ftpPwd,ftpPath2,localPath2);
+		memset(outFileArray[i],0,1024);
+		strcpy(outFileArray[i],localPath2);
+		printf("down load output file:%s\n",outFileArray[i]);
+	}
+	printf("================download output file over!================\n");
+	
 	
 	//ftp test ok!
 	//char* ftp_path="ftp://192.168.1.108/Documents/t1.txt";
@@ -473,8 +576,10 @@ int main(int argc, char* argv[]){
 	
 	memset(fmtNow,0,sizeof(fmtNow));
 	getSystemTime(fmtNow);
-	printf("=================%s=================\n",fmtNow);
-	sprintf(fmtDate,"2020-05-22");
+	//printf("=================%s=================\n",fmtNow);
+	//sprintf(fmtDate,"2020-05-22");
+	memset(fmtDate,0,sizeof(fmtDate));
+	strncpy(fmtDate,fmtNow,10);
 	memset(jvwgPath,0,sizeof(jvwgPath));
 	readini("profile.ini","jvwgfile","path",jvwgPath);
 	
@@ -486,63 +591,73 @@ int main(int argc, char* argv[]){
 	sprintf(keyFile,"%s%s.key",retPath,fmtDate);
 	
 	//printf("retFile=%s	keyFile=%s\n",retFile,keyFile);
-	
+	//	goto gt636;	
 	//delete keyFile
 	if(0==access(keyFile,F_OK)) remove(keyFile);
+	
+	//delete retFile
+	if(0==access(retFile,F_OK)) remove(retFile);	
+		
+
 	//i=0;
 	list_init(&list4020,destroyLog);
 	list_init(&list4030,destroyLog);
+	printf("================treate log file begin!================\n");
+	//按本期所有日期，遍历所有日志文件
+	for(i2=0;i2<iDateNum;i2++){
+		i=0;
+		while(true){
+			sprintf(jvwgFile,"%sdebug-%s.%d.log",jvwgPath,dateArray[i2],i);
+			if(-1==access(jvwgFile,F_OK)) break;
+			
+			
+			recNum = getLogRecords( &list4020,&list4030,jvwgFile,retFile);
+			printf("getLogRecords:%s over!\n",jvwgFile);
+			
 	
-	while(true){
-		sprintf(jvwgFile,"%sdebug-%s.%d.log",jvwgPath,fmtDate,i);
-		//printf("%s treated begin!\n",jvwgFile);	
-		if(-1==access(jvwgFile,F_OK)) break;
-		printf("%s treated begin!\n",jvwgFile);	
+			printf("4020 len=%d\t4030 len=%d\n",list_size(&list4020),list_size(&list4030));
+			//break;
+			
+			
+			
+			compareLogRecords(&list4020,&list4030,retFile,keyFile);
+			printf("compareLogRecords:%s over!\n",jvwgFile);
+			printf("4020 len=%d\t4030 len=%d\n",list_size(&list4020),list_size(&list4030));
+			
+			i++;
+			
 		
-		//strcpy(jvwgFileArray[i] ,jvwgFile); 
-		
-		recNum = getLogRecords( &list4020,&list4030,jvwgFile,retFile);
-		printf("getLogRecords:%s over!\n",jvwgFile);
-		
-//		ple = list_head(&list4020);
-//		while(ple){
-//			psld = (StrLogData*)ple->data;
-//			printf("4020 lsh=%s\tcpkey=%s\n",psld->lsh,psld->cpkey);
-//			ple = list_next(ple);
-//		}
-		printf("before 4020 len=%d\t4030 len=%d\n",list_size(&list4020),list_size(&list4030));
-		//break;
-		
-		
-		
-		compareLogRecords(&list4020,&list4030,retFile,keyFile);
-		printf("middle 4020 len=%d\t4030 len=%d\n",list_size(&list4020),list_size(&list4030));
-		printf("compareLogRecords:%s over!\n",jvwgFile);
-		//i++;
-		
-	
+		}
 	}
-	
 	list_destroy(&list4020);
 	list_destroy(&list4030);
-	printf("after 4020 len=%d\t4030 len=%d\n",list_size(&list4020),list_size(&list4030));
+	//printf("after 4020 len=%d\t4030 len=%d\n",list_size(&list4020),list_size(&list4030));
+	printf("================treate log file over!================\n");
 	
+	gt636:
 	
 	//put key file to tree
 	recNum = PutKeyToTree(&biTreeKey,keyFile);
 	printf("count = %d\tmax key = %s\tmin key = %s\n",recNum,maxImum(&biTreeKey)->data,minImum(&biTreeKey)->data);
+	
+	
+	
+	
+	
 	
 	memset(jvwgIp,0,sizeof(jvwgIp));
 	memset(c,0,sizeof(c));
 	readini(PROFILE,"jvwgfile","ip",jvwgIp);
 	readini(PROFILE,"jvwgfile","port",c);
 	jvwgPort = atoi(c);
+	printf("java netgate ip:%s\tport:%d\n",jvwgIp,jvwgPort);
 	for(i=0;i<iRet;i++){
+		printf("begin compareTicket:%s\n",outFileArray[i]);
 		if(0 < compareTicket(outFileArray[i],&biTreeKey)){
 			sprintf(jvwgFile,"%s_N",outFileArray[i]);
-			iRet2 = sendXkjRz(jvwgFile,jvwgIp,jvwgPort);
+			iRet2 = sendXkjRz(jvwgFile,jvwgIp,jvwgPort,xszbmzdh);
 			if(iRet2 <= 0){
-				printf("send jvwg error %s\n",jvwgFile);
+				printf("send jvwg error :file=%s\treturn=%d\n",jvwgFile,iRet2);
 			}
 		}
 		

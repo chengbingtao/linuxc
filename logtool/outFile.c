@@ -238,7 +238,9 @@ unsigned long compareTicket_(char* FileName,BiTree *keyTree,char* tgtFile){
 	
 	if((lsk = fopen(FileName,"rb"))==NULL) return -3;
 		
-	if((fpTgt = fopen(tgtFile,"ab")) == NULL) return -4;	
+	if(0==access(tgtFile,F_OK)) remove(tgtFile);
+		
+	if((fpTgt = fopen(tgtFile,"wb")) == NULL) return -4;	
 	for(ttt=0;ttt<FileLength;ttt++){
 		if(lsOrFs==1){
 				memset(&sthout1,0,sizeof(sthout1));
@@ -266,10 +268,11 @@ unsigned long compareTicket_(char* FileName,BiTree *keyTree,char* tgtFile){
 						//if(i==-1) return -4;
 						pNode = search(keyTree, strPiao->cpkey);
 						if(pNode){
+							//printf("%s\t",pNode->data);
 							deleteNode2(keyTree, pNode);
 						}else{
 							//send javawg
-							if((fwrite(strPiao,sizeof(strPiao),1,fpTgt))!=1) 
+							if((fwrite(strPiao,sizeof(struct piao),1,fpTgt))!=1) 
 								printf("write to %s error:zdh=%d,key=%s\n",tgtFile,strPiao->xszbm,strPiao->cpkey);
 						}
 						lastdis++;	
@@ -288,10 +291,11 @@ unsigned long compareTicket_(char* FileName,BiTree *keyTree,char* tgtFile){
 //						if(i==-1) return -4;
 							pNode = search(keyTree, strPiao->cpkey);
 							if(pNode){
+								//printf("%s\t",pNode->data);
 								deleteNode2(keyTree, pNode);
 							}else{
 								//send javawg
-								if((fwrite(strPiao,sizeof(strPiao),1,fpTgt))!=1) 
+								if((fwrite(strPiao,sizeof(struct piao),1,fpTgt))!=1) 
 								printf("write to %s error:zdh=%d,key=%s\n",tgtFile,strPiao->xszbm,strPiao->cpkey);
 							}
 
@@ -336,10 +340,12 @@ unsigned long compareTicket_(char* FileName,BiTree *keyTree,char* tgtFile){
 		
 		pNode = search(keyTree, strPiao->cpkey);
 		if(pNode){
+			//printf("%s\t",pNode->data);
 			deleteNode2(keyTree, pNode);
+			
 		}else{
 			//send javawg
-			if((fwrite(strPiao,sizeof(strPiao),1,fpTgt))!=1) 
+			if((fwrite(strPiao,sizeof(struct piao),1,fpTgt))!=1) 
 								printf("write to %s error:zdh=%d,key=%s\n",tgtFile,strPiao->xszbm,strPiao->cpkey);
 		}
 			
@@ -378,7 +384,7 @@ unsigned long compareTicket(char* FileName,BiTree *keyTree){
 }
 
 //新开奖
-unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port)
+unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long* xszbmZdh[])
 {
 	FILE *fp = NULL;
 	unsigned long FileLength,fl,ttt;
@@ -467,7 +473,7 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port)
 		memset(rz,0,sizeof(rz));
 				fread(&strPiao,sizeof(strPiao),1,fp);
 				//printf("lsk cpk:%s\n",sthout1.cpkey);
-				
+				Xszbm8 = xszbmZdh[strPiao.xszbm];
 				if(ifLsFs == 1){
 					for(i=0;i<strPiao.tiaoshu;i++){
 						if(i!=0)	sprintf(Code+strlen(Code),"%s","#");

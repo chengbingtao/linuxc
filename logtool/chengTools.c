@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <errno.h>
 #include "chengTools.h"
 
 unsigned long get_file_size(const char *filename)  
@@ -10,7 +11,7 @@ unsigned long get_file_size(const char *filename)
     struct stat buf;  
     if(stat(filename, &buf)<0)  
     {  
-    	printf("get_file_size error\n");
+    	printf("get_file_size error:%s\n",strerror(errno));
         return 0;  
     }  
     return (unsigned long)buf.st_size;  
@@ -228,4 +229,25 @@ int cbt_readini(char *filename,char *PName,char *RName,char *result)
 		memset(buf,0,sizeof(buf));
 	}
 	return 0;
+}
+
+
+char *cheng_fgets(char *s, int n,  FILE *stream)
+{
+   register int c;
+   register char *cs;
+   cs = s;
+	printf("329 cheng_fgets begin!\n");
+   while(--n > 0 && (c = getc(stream)) != EOF)
+   {
+      if((*cs++ =   c) == '\n')
+      {
+         break;
+      }
+      
+      printf("cheng_fgets c=%d\n",c);
+   }
+
+   *cs = '\0';
+   return (c == EOF && cs == s) ? NULL : s ;
 }
