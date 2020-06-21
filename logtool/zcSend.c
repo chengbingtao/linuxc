@@ -2,9 +2,9 @@
 
 
 /*
-write�İ�������
-�����ź��жϺ󣬼���д�룬����Ӱ��
-����д���ֽ���
+write的包裹函数
+当被信号中断后，继续写入，不受影响
+返回写入字节数
 */
 size_t Send(int fd,void* pOut,size_t sizeOut)
 {
@@ -36,8 +36,8 @@ int init_socket(char *ip,unsigned int port)
 	int ret = 0;
 	int err =0;
 	int bDontLinger = -1;
-	//�������ڹ�ǿserver���ص�ֻ�д���û��������Ϣ����Ӧ���㹻��
-	//select ģ�ͣ������ó�ʱ
+	//这里由于桂强server返回的只有错误没有其他信息长度应该足够用
+	//select 模型，即设置超时
 	struct timeval time_out;
 	fd_set r;
 	unsigned long ul = 1;	
@@ -53,6 +53,17 @@ int init_socket(char *ip,unsigned int port)
 		return -1;
 	}
 	
+	//设置发送接收超时
+	time_out.tv_sec = 1;
+	time_out.tv_usec = 0;
+	ret = setsockopt(sock,SOL_SOCKET,SO_SNDTIMEO,&time_out,sizeof(time_out));
+	if(ret!=0){
+		printf("setsockopt error:send timeout return %d,%s\n",ret,strerror(errno));
+	}
+	ret = setsockopt(sock,SOL_SOCKET,SO_RCVTIMEO,&time_out,sizeof(time_out));
+	if(ret!=0){
+		printf("setsockopt error:recvieve timeout return %d,%s\n",ret,strerror(errno));
+	}
 	
 	serveraddr.sin_family = AF_INET;
 	serveraddr.sin_addr.s_addr = inet_addr(ip);
@@ -63,7 +74,7 @@ int init_socket(char *ip,unsigned int port)
 	{
 			FD_ZERO(&r);
 			FD_SET(sock, &r);
-			time_out.tv_sec = 0; //���ӳ�ʱ3��
+			time_out.tv_sec = 0; //连接超时3秒
 			time_out.tv_usec =500*1000;
 		  if( select(sock+1, NULL, &r, NULL, &time_out) > 0)
       {
@@ -83,7 +94,7 @@ int init_socket(char *ip,unsigned int port)
 
 	}
 	
-	//һ�������ģʽ�׽ӱȽ��ѿ��ƣ����Ը���ʵ��������� ���������ģʽ
+	//一般非阻塞模式套接比较难控制，可以根据实际情况考虑 再设回阻塞模式
 
 	
 	
@@ -230,30 +241,30 @@ int cics_redis_data(int sockfd,char *business_name,char* list, int draw,void* da
 	memcpy(str_sec,timestr+17,2);
 	memcpy(str_msec,timestr+20,3);
 	srand((unsigned)time(NULL));
-	rand_digital = rand()%RAND_MAX;//ȡ��λ�����
+	rand_digital = rand()%RAND_MAX;//取五位随机数
 	//logn("[%s-%05d]",str_msec,rand_digital);
 	//logn("rand:%05d",rand_digital);
 	//logn("data:%s,len:%d",(char *)data,sql_len);
 	sprintf(str_time,"%s-%s-%s %s:%s:%s",str_year,str_mon,str_day,str_hour,str_min,str_sec);
 	sprintf(trans_serial,"%s%s%s%s%s%s%s%s%s%05d",business_name,station_terminal,str_year,str_mon,str_day,str_hour,str_min,str_sec,str_msec,rand_digital);	
 	//logn("tran_serial:%s",trans_serial);
-	/*Ϊ�˱�֤�в�����ϵͳ������ͬһ��socket 2017-08-18
+	/*为了保证中彩三大系统都是用同一个socket 2017-08-18
 	if (0 > (sockfd = init_socket(ip, port)))
 	{
 		return -1;
 	}
 	*/
 	memset(packdata, 0, sizeof(packdata));
-	//����Э���޸ġ���ͷ���������ֺ�������һ��������ֶ�cics����̶�1����
+	//由于协议修改”包头“在命令字后面添加一个随机数字段cics这里固定1即可
 	if(draw==1)
 	{
-		//DATABASE_FLAG=0 Draw=1 �첽(дREDIS)  draw=0 ͬ��(תJAVA����) DATABASE_FLAG ��=0  draw����ֵ 1��SQL��� 2���м��洢����3����̨�洢����
+		//DATABASE_FLAG=0 Draw=1 异步(写REDIS)  draw=0 同步(转JAVA网关) DATABASE_FLAG ！=0  draw以下值 1：SQL语句 2：中间层存储过程3：后台存储过程
 		len += sprintf(packdata + 6, "%d|%s|1|%s$%d$%d$", 1, CICS_REDIS_CMD, list, CICS_MAIN_DB2, draw);
 	}
 	else
 	{
-		//����ֱ��Ѿ����Թ�,��ʱ�������ݺ�ʵʱ�ϴ�����Э���б仯,ͨ�ú���ֻ����Щ������
-		//DATABASE_FLAG=0 Draw=1 �첽(дREDIS)  draw=0 ͬ��(תJAVA����) DATABASE_FLAG ��=0  draw����ֵ 1��SQL��� 2���м��洢����3����̨�洢����
+		//异地灾备已经测试过,此时容灾数据和实时上传数据协议有变化,通用函数只能做些处理！
+		//DATABASE_FLAG=0 Draw=1 异步(写REDIS)  draw=0 同步(转JAVA网关) DATABASE_FLAG ！=0  draw以下值 1：SQL语句 2：中间层存储过程3：后台存储过程
 		len += sprintf(packdata + 6, "%d|%s|1|%s$%d$%d$", 1, CICS_REDIS_CMD, list, 0, 1);
 	}
 	memcpy(packdata + len + 6, data, sql_len);
@@ -291,7 +302,7 @@ int cics_redis_data(int sockfd,char *business_name,char* list, int draw,void* da
 	  close(sockfd);
 		return -3;
 	}
-	//Ϊ�˱�֤�в�����ϵͳ������ͬһ��socket����ͨ�����ﲻ���йر�socket 2017-08-18
+	//为了保证中彩三大系统都是用同一个socket进行通信这里不进行关闭socket 2017-08-18
 	//closesocket(sockfd);
 //	logn("buf = %s", packdata);
 
