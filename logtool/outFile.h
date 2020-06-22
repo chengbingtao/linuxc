@@ -38,5 +38,5 @@ struct piao{
 
 long getTicket(char* FileName,List *listRet);
 unsigned long compareTicket(char* FileName,BiTree *keyTree);
-unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long* xszbmZdh[]);
+unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long xszbmZdh[]);
 #endif

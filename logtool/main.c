@@ -265,21 +265,22 @@ long putXszbmZdhToArray(long* pArray,char* fileName){
 		if(p==NULL) break;
 		
 		memset(cXszbm,0,sizeof(cXszbm));
-		strncpy(cXszbm,cLine,(unsigned int)p - (unsigned int)cLine	- 1);
+		strncpy(cXszbm,cLine,(unsigned int)p - (unsigned int)cLine	);
 		
 		p++;
 		p2 = strchr(p,'|');
 		memset(cZdh,0,sizeof(cZdh));
-		strncpy(cZdh,p,(unsigned int)p2 - (unsigned int)p - 1);
+		strncpy(cZdh,p,(unsigned int)p2 - (unsigned int)p );
 		
 		lXszbm = atol(cXszbm);
 		lZdh = atol(cZdh);
+		//printf("zdh=%d,xszbm=%d\t",lZdh,lXszbm);
 		pArray[lZdh] = lXszbm;
 		
 		
 		
 		memset(cLine,0,sizeof(cLine));
-		fgets(cLine,sizeof(cLine),fp);
+		//fgets(cLine,sizeof(cLine),fp);
 	}
 	fclose(fp);
 	return l_1;
@@ -443,8 +444,12 @@ int main(int argc, char* argv[]){
 	//填充xszbmzdh数组
 	if(get_file_size(localPath) >0){
 		memset(xszbmzdh,0,sizeof(xszbmzdh));
-		putXszbmZdhToArray(xszbmzdh,localPath);
-		printf("================read tzz file over!================\n");
+		lRet = putXszbmZdhToArray(xszbmzdh,localPath);
+		printf("================read tzz file over!line %d================\n",lRet);
+				for(iRet =lRet;iRet>=0;iRet--){
+					//printf("<%d,%d>\t",iRet,xszbmzdh[iRet]);
+				}
+				printf("\n");
 	}else{
 		printf("================read tzz file error!================\n");
 	}
@@ -652,8 +657,11 @@ int main(int argc, char* argv[]){
 	jvwgPort = atoi(c);
 	printf("java netgate ip:%s\tport:%d\n",jvwgIp,jvwgPort);
 	for(i=0;i<iRet;i++){
+		if(-1==access(outFileArray[i],F_OK)) break;
 		printf("begin compareTicket:%s\n",outFileArray[i]);
+		
 		if(0 < compareTicket(outFileArray[i],&biTreeKey)){
+			printf("main 659\n");
 			sprintf(jvwgFile,"%s_N",outFileArray[i]);
 			iRet2 = sendXkjRz(jvwgFile,jvwgIp,jvwgPort,xszbmzdh);
 			if(iRet2 <= 0){

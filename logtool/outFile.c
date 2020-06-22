@@ -241,7 +241,12 @@ unsigned long compareTicket_(char* FileName,BiTree *keyTree,char* tgtFile){
 	if(0==access(tgtFile,F_OK)) remove(tgtFile);
 		
 	if((fpTgt = fopen(tgtFile,"wb")) == NULL) return -4;	
+		
+	//printf("line:245\n");		
+	
+		
 	for(ttt=0;ttt<FileLength;ttt++){
+		
 		if(lsOrFs==1){
 				memset(&sthout1,0,sizeof(sthout1));
 				fread(&sthout1,sizeof(sthout1),1,lsk);
@@ -271,6 +276,7 @@ unsigned long compareTicket_(char* FileName,BiTree *keyTree,char* tgtFile){
 							//printf("%s\t",pNode->data);
 							deleteNode2(keyTree, pNode);
 						}else{
+							//printf("send javawg:write to fpTgt 3,key=%s\n",strPiao->cpkey);
 							//send javawg
 							if((fwrite(strPiao,sizeof(struct piao),1,fpTgt))!=1) 
 								printf("write to %s error:zdh=%d,key=%s\n",tgtFile,strPiao->xszbm,strPiao->cpkey);
@@ -291,9 +297,11 @@ unsigned long compareTicket_(char* FileName,BiTree *keyTree,char* tgtFile){
 //						if(i==-1) return -4;
 							pNode = search(keyTree, strPiao->cpkey);
 							if(pNode){
+								
 								//printf("%s\t",pNode->data);
 								deleteNode2(keyTree, pNode);
 							}else{
+								//printf("send javawg:write to fpTgt 2,key=%s\n",strPiao->cpkey);
 								//send javawg
 								if((fwrite(strPiao,sizeof(struct piao),1,fpTgt))!=1) 
 								printf("write to %s error:zdh=%d,key=%s\n",tgtFile,strPiao->xszbm,strPiao->cpkey);
@@ -337,19 +345,21 @@ unsigned long compareTicket_(char* FileName,BiTree *keyTree,char* tgtFile){
 		//printf("piao key:%s\n",strPiao->cpkey);
 		//i=list_insert_next(listRet,NULL, strPiao);			
 		//if(i==-1) return -5;
-		
+			
 		pNode = search(keyTree, strPiao->cpkey);
 		if(pNode){
 			//printf("%s\t",pNode->data);
 			deleteNode2(keyTree, pNode);
 			
 		}else{
+			//printf("send javawg:write to fpTgt 1,key=%s\n",strPiao->cpkey);
 			//send javawg
 			if((fwrite(strPiao,sizeof(struct piao),1,fpTgt))!=1) 
 								printf("write to %s error:zdh=%d,key=%s\n",tgtFile,strPiao->xszbm,strPiao->cpkey);
 		}
 			
-		lastdis++;			
+		lastdis++;	
+			
 		if(lsk )fclose(lsk);
 	
 		if(fpTgt) fclose(fpTgt);
@@ -380,11 +390,11 @@ unsigned long compareTicket(char* FileName,BiTree *keyTree){
 		
 	sprintf(tgtFile,"%s_N",FileName);
 	
-	compareTicket_(FileName,keyTree,tgtFile);						
+	return compareTicket_(FileName,keyTree,tgtFile);						
 }
 
 //新开奖
-unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long* xszbmZdh[])
+unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long xszbmZdh[])
 {
 	FILE *fp = NULL;
 	unsigned long FileLength,fl,ttt;
@@ -404,6 +414,7 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long* xszbmZdh
 	int i,ifLsFs,h_dmsl,h_tmsl;
 	int iSocket=0,iRet=0,iLen;
 	char recvmsg[1024];
+	long lRet;
 	FileLength = get_file_size(piaoFile);
 	//流水库文件读取并处理
 	
@@ -416,6 +427,8 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long* xszbmZdh
 	}
 	fl=FileLength/sizeof(struct piao);		/*流水库文件单条记录长度是80*/
 		//printf("The file length of %s is %ld\n",FileName,FileLength);
+	
+	
 	
 		memset(cWf,0,sizeof(cWf));
 		memset(cYxbm,0,sizeof(cYxbm));
@@ -450,7 +463,7 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long* xszbmZdh
 
 	
 	FileLength=fl;
-	
+	printf("%d tickets in file %s\n",FileLength,piaoFile);
 	fp = fopen(piaoFile,"rb");
 	
 	memset(cDatetime,0,sizeof(cDatetime));
@@ -460,162 +473,187 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long* xszbmZdh
 		
 		memset(cTime,0,sizeof(cTime));
 		p=strstr(cDatetime," ");
-		strcpy(cTime,p);
+		strcpy(cTime,p+1);
 	}
 	
 	iSocket = init_socket(ip,port);
 	if(iSocket <=0) return -2;
 	
+	//printf("481\n");
 	for(ttt=0;ttt<FileLength;ttt++){
 		
 		memset(&strPiao,0,sizeof(strPiao));
 		memset(xkj,0,sizeof(xkj));
 		memset(rz,0,sizeof(rz));
-				fread(&strPiao,sizeof(strPiao),1,fp);
-				//printf("lsk cpk:%s\n",sthout1.cpkey);
-				Xszbm8 = xszbmZdh[strPiao.xszbm];
-				if(ifLsFs == 1){
-					for(i=0;i<strPiao.tiaoshu;i++){
-						if(i!=0)	sprintf(Code+strlen(Code),"%s","#");
-							
-						if(strcmp(cWf,"p3")==0)//
-							sprintf(Code+strlen(Code),"00&01&%04d&03%02d%02d%02d",strPiao.tz[i*10+6],strPiao.tz[i*10+0],strPiao.tz[i*10+1],strPiao.tz[i*10+2]);
-						if(strcmp(cWf,"lot")==0)
-							sprintf(Code+strlen(Code),"00&01&%04d&06%02d%02d%02d%02d%02d%02d01%02d",
-								strPiao.tz[i],strPiao.tz[i*10+0],strPiao.tz[i*10+1],strPiao.tz[i*10+2],strPiao.tz[i*10+3],strPiao.tz[i*10+4],strPiao.tz[i*10+5],strPiao.tz[i*10+6]);
-						if(strcmp(cWf,"c730")==0)
-							sprintf(Code+strlen(Code),"00&01&%04d&07%02d%02d%02d%02d%02d%02d%02d",
-								strPiao.tz[i],strPiao.tz[i*10+0],strPiao.tz[i*10+1],strPiao.tz[i*10+2],strPiao.tz[i*10+3],strPiao.tz[i*10+4],strPiao.tz[i*10+5],strPiao.tz[i*10+6]);
-						if(strcmp(cWf,"c736")==0)
-							sprintf(Code+strlen(Code),"00&01&%04d&07%02d%02d%02d%02d%02d%02d%02d",
-								strPiao.tz[i],strPiao.tz[i*10+0],strPiao.tz[i*10+1],strPiao.tz[i*10+2],strPiao.tz[i*10+3],strPiao.tz[i*10+4],strPiao.tz[i*10+5],strPiao.tz[i*10+6]);	
-						if(strcmp(cWf,"c522")==0)
-							sprintf(Code+strlen(Code),"00&01&%04d&05%02d%02d%02d%02d%02d",
-								strPiao.tz[i],strPiao.tz[i*10+0],strPiao.tz[i*10+1],strPiao.tz[i*10+2],strPiao.tz[i*10+3],strPiao.tz[i*10+4]);	
-						if(strcmp(cWf,"p62")==0)
-							sprintf(Code+strlen(Code),"00&01&%04d&06%02d%02d%02d%02d%02d%02d01%02d",
-								strPiao.tz[i],strPiao.tz[i*10+0],strPiao.tz[i*10+1],strPiao.tz[i*10+2],strPiao.tz[i*10+3],strPiao.tz[i*10+4],strPiao.tz[i*10+5],strPiao.tz[i*10+6]);	
+		memset(code,0,sizeof(code));
+		fread(&strPiao,sizeof(strPiao),1,fp);
+		
+//				for(lRet =39999;lRet>=0;lRet--){
+//					if(xszbmZdh[lRet] > 0) printf("<%d>\t",xszbmZdh[lRet]);
+//				}
+//				printf("\n%d\n",xszbmZdh[30679]);
+		
+				//printf("lsk zdh:%d\n",strPiao.xszbm);
+		Xszbm8 = xszbmZdh[strPiao.xszbm];
+		
+		
+		if(ifLsFs == 1){
+			for(i=0;i<strPiao.tiaoshu;i++){
+				
+				if(i!=0)	sprintf(Code+strlen(Code),"%s","#");
 					
-					}
+				if(strcmp(cWf,"p3")==0)//
+					sprintf(Code+strlen(Code),"00&01&%04d&03%02d%02d%02d",strPiao.tz[i*10+6],strPiao.tz[i*10+0],strPiao.tz[i*10+1],strPiao.tz[i*10+2]);
+				if(strcmp(cWf,"lot")==0)
+					sprintf(Code+strlen(Code),"00&01&%04d&06%02d%02d%02d%02d%02d%02d01%02d",
+						strPiao.tz[i],strPiao.tz[i*10+0],strPiao.tz[i*10+1],strPiao.tz[i*10+2],strPiao.tz[i*10+3],strPiao.tz[i*10+4],strPiao.tz[i*10+5],strPiao.tz[i*10+6]);
+				if(strcmp(cWf,"c730")==0)
+					sprintf(Code+strlen(Code),"00&01&%04d&07%02d%02d%02d%02d%02d%02d%02d",
+						strPiao.tz[i],strPiao.tz[i*10+0],strPiao.tz[i*10+1],strPiao.tz[i*10+2],strPiao.tz[i*10+3],strPiao.tz[i*10+4],strPiao.tz[i*10+5],strPiao.tz[i*10+6]);
+				if(strcmp(cWf,"c736")==0)
+					sprintf(Code+strlen(Code),"00&01&%04d&07%02d%02d%02d%02d%02d%02d%02d",
+						strPiao.tz[i],strPiao.tz[i*10+0],strPiao.tz[i*10+1],strPiao.tz[i*10+2],strPiao.tz[i*10+3],strPiao.tz[i*10+4],strPiao.tz[i*10+5],strPiao.tz[i*10+6]);	
+				if(strcmp(cWf,"c522")==0)
+					sprintf(Code+strlen(Code),"00&01&%04d&05%02d%02d%02d%02d%02d",
+						strPiao.tz[i],strPiao.tz[i*10+0],strPiao.tz[i*10+1],strPiao.tz[i*10+2],strPiao.tz[i*10+3],strPiao.tz[i*10+4]);	
+				if(strcmp(cWf,"p62")==0)
+					sprintf(Code+strlen(Code),"00&01&%04d&06%02d%02d%02d%02d%02d%02d01%02d",
+						strPiao.tz[i],strPiao.tz[i*10+0],strPiao.tz[i*10+1],strPiao.tz[i*10+2],strPiao.tz[i*10+3],strPiao.tz[i*10+4],strPiao.tz[i*10+5],strPiao.tz[i*10+6]);	
 					
-					if((strcmp(cWf,"lot")==0)||(strcmp(cWf,"c730")==0))
-					{
-							//新开奖
-							//Xszbm8需要转换,SerialNum需要实现
-					             sprintf(xkj,"ND_Region_List$0$1$4020,%s,23,%s,%d,%d,1,%d,%d,,%s,1,,,,,,,,,%s %s,%d.00,,1,1,1,%d,%s$%s$HLJHT%s%03d11111$4",
-													       strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,1,cDate,cTime,strPiao.tzs*2,strPiao.tiaoshu,Code,cTime,cTime,SerialNum++);
+			}
+					
+			if((strcmp(cWf,"lot")==0)||(strcmp(cWf,"c730")==0))
+			{
+					//新开奖
+					//Xszbm8需要转换,SerialNum需要实现
+				sprintf(xkj,"ND_Region_List$0$1$4020,%s,23,%s,%d,%d,1,%d,%d,,%s,1,,,,,,,,,%s %s,%d.00,,1,1,1,%d,%s$%s$HLJHT%s%03d11111$4",
+				       strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,1,cDate,cTime,strPiao.tzs*2,strPiao.tiaoshu,Code,cTime,cTime,SerialNum++);
 												//THead(sendbuf,Body);	       
-					}
+			}
 					
-					sprintf(rz,"DT_Region_List$0$1$%s,%s,23,%s,%d,%d,1,%d,%d,%s,%s,1,,,,,,,,,%s %s,%d.00,,1,1,1,%d,%s$%s$HLJHT%s%03d11111$8",
-			  				 "4020",strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,strPiao.lsh,1,cDate,cTime,strPiao.tzs*2,strPiao.tiaoshu,Code,cTime,cTime,SerialNum++);
+			sprintf(rz,"DT_Region_List$0$1$%s,%s,23,%s,%d,%d,1,%d,%d,%d,%d,1,,,,,,,,,%s %s,%d.00,,1,1,1,%d,%s$%s$HLJHT%s%03d11111$8",
+							 "4020",strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,strPiao.lsh,1,cDate,cTime,strPiao.tzs*2,strPiao.tiaoshu,Code,cTime,cTime,SerialNum++);
 					
+		}
+		if(ifLsFs == 2){
+			if(strcmp(cWf,"lot")==0)
+		 	{
+		  		h_dmsl=strPiao.tmsl/100;
+		  		h_tmsl=strPiao.tmsl%100;	
+		  		
+		  		
+		  			  		
+		  		if(h_dmsl!=0)
+		  		{
+			  			sprintf(Code+strlen(Code),"00&03&0001&");
+			  			sprintf(Code+strlen(Code),"%02d",h_dmsl);
+			  			for(i=0;i<h_dmsl;i++)
+			  			{
+			  			  sprintf(Code+strlen(Code),"%02d",strPiao.tz[i]);
+		  		 	  }
+			  	}
+				  else
+				  		sprintf(Code+strlen(Code),"00&02&0001&");
+				  		
+				  sprintf(Code+strlen(Code),"%02d",h_tmsl);
+				  for(i=0;i<h_tmsl;i++)
+				  {
+				  	 sprintf(Code+strlen(Code),"%02d",strPiao.tz[i+h_dmsl]);
+				  }
+				  sprintf(Code+strlen(Code),"%02d",strPiao.dmsl); 	
+				  
+				  
+				    
+				  for(i=0;i<strPiao.dmsl;i++)
+				  {
+				     sprintf(Code+strlen(Code),"%02d",strPiao.tz[i+h_dmsl+h_tmsl]);
+				  }					 
+			}
+			else
+			{	  		
+				if(strPiao.dmsl!=0)//
+				{
+					sprintf(Code+strlen(Code),"00&03&0001&");//胆拖情况
+					sprintf(Code+strlen(Code),"%02d",strPiao.dmsl);
+					for(i=0;i<strPiao.dmsl;i++)
+					{
+				  	sprintf(Code+strlen(Code),"%02d",strPiao.tz[i]);
+				  }
 				}
-				if(ifLsFs == 2){
-					if(strcmp(cWf,"lot")==0)
-			  	{
-				  		h_dmsl=strPiao.tmsl/100;
-				  		h_tmsl=strPiao.tmsl%100;		  		
-				  		if(h_dmsl!=0)
-				  		{
-					  			sprintf(Code+strlen(Code),"00&03&0001&");
-					  			sprintf(Code+strlen(Code),"%02d",h_dmsl);
-					  			for(i=0;i<h_dmsl;i++)
-					  			{
-					  			  sprintf(Code+strlen(Code),"%02d",strPiao.tz[i]);
-					  		 	 }
-			  		   }
-				  		else
-				  				sprintf(Code+strlen(Code),"00&02&0001&");
-				  				
-				  		sprintf(Code+strlen(Code),"%02d",h_tmsl);
-				  		for(i=0;i<h_tmsl;i++)
-				  		{
-				  			 sprintf(Code+strlen(Code),"%02d",strPiao.tz[i+h_dmsl]);
-				  		 	}
-				  		sprintf(Code+strlen(Code),"%02d",strPiao.dmsl); 	  
-				  		for(i=0;i<strPiao.dmsl;i++)
-				  		{
-				  		   sprintf(Code+strlen(Code),"%02d",strPiao.tz[i+h_dmsl+h_tmsl]);
-				  		  }					 
-			  	  }
-			  	else
-			  	{	  		
-						  if(strPiao.dmsl!=0)//
-				      {
-					  		sprintf(Code+strlen(Code),"00&03&0001&");//胆拖情况
-					  		sprintf(Code+strlen(Code),"%02d",strPiao.dmsl);
-					  		for(i=0;i<strPiao.dmsl;i++)
-					  		{
-				  			  sprintf(Code+strlen(Code),"%02d",strPiao.tz[i]);
-				  		  }
-				  	  }
-				  	  else
-				  	    sprintf(Code+strlen(Code),"00&02&0001&");//复式的时候
+				else
+					sprintf(Code+strlen(Code),"00&02&0001&");//复式的时候
 				  	  
-				  	  sprintf(Code+strlen(Code),"%02d",strPiao.tmsl);
-				  	  for(i=0;i<strPiao.tmsl;i++)
-					  	{
-				  			  sprintf(Code+strlen(Code),"%02d",strPiao.tz[i+strPiao.dmsl]);
-				  		  } 
-			  	} 
+				  sprintf(Code+strlen(Code),"%02d",strPiao.tmsl);
+				  for(i=0;i<strPiao.tmsl;i++)
+					{
+				    sprintf(Code+strlen(Code),"%02d",strPiao.tz[i+strPiao.dmsl]);
+				  } 
+			} 
 			  	
-			  	if((strcmp(cWf,"lot")==0)||(strcmp(cWf,"c730")==0))
-					{	
-					    sprintf(xkj,"ND_Region_List$0$1$%s,%s,23,%s,%d,%d,1,%d,%d,,1,1,,,,,,,,,%s %s,%d.00,,1,1,1,1,%s$%s$HLJHT%s%03d11111$4",
-													   "4020",strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,cDate,cTime,strPiao.tzs*2,Code,cTime,cTime,SerialNum++);
-							//THead(sendbuf,Body);		
-					}
+			if((strcmp(cWf,"lot")==0)||(strcmp(cWf,"c730")==0))
+			{	
+				
+				sprintf(xkj,"ND_Region_List$0$1$%s,%s,23,%s,%d,%d,1,%d,%d,,1,1,,,,,,,,,%s %s,%d.00,,1,1,1,1,%s$%s$HLJHT%s%03d11111$4",
+					   "4020",strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,cDate,cTime,strPiao.tzs*2,Code,cTime,cTime,SerialNum++);
+							//THead(sendbuf,Body);	
+				//printf("xkj=%s\n",xkj);				
+			}
 									
-					sprintf(rz,"DT_Region_List$0$1$%s,%s,23,%s,%d,%d,1,%d,%d,%s,1,1,,,,,,,,,%s %s,%d.00,,1,1,1,1,%s$%s$HLJHT%s%03d11111$8",
-							  				 "4020",strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,strPiao.lsh,cDate,cTime,strPiao.tzs*2,Code,cTime,cTime,SerialNum++);////
-				}
+			sprintf(rz,"DT_Region_List$0$1$%s,%s,23,%s,%d,%d,1,%d,%d,%d,1,1,,,,,,,,,%s %s,%d.00,,1,1,1,1,%s$%s$HLJHT%s%03d11111$8",
+					  				 "4020",strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,strPiao.lsh,cDate,cTime,strPiao.tzs*2,Code,cTime,cTime,SerialNum++);////
+					  				 
+			//printf("rz=%s\n",rz);		  		
+		}
 				
-				if(strlen(xkj) > 0){
-					strcpy(CommandID,"REDIS");
-					
-					sprintf(Serial,"%ld%04d",time(NULL),SerialNum);
-					SerialNum++;	
-					//if((SerialNum>=1000)||(SerialNum<0))	SerialNum=0;
-					memset(sendbuf,0,sizeof(sendbuf));	
-					sprintf(sendbuf,"@%04d|1|%s|%s|%s",
-						4+strlen(CommandID)+strlen(Serial)+strlen(xkj),CommandID,Serial,xkj);
-						
-					if(0 > sendbuff(iSocket,sendbuf, strlen(sendbuf)) ){
-						printf("sendbuff error:%s\n",sendbuf);
-						continue;
-					}else{
-						iRet = recvbuff(iSocket,recvmsg,&iLen);
-						if(iRet > 0){ 
-							printf("receive ok:%s\n",recvmsg);
-						}else{
-							printf("receive fail:%s\n",sendbuf);
-						}
-					}
-				}
 				
-				if(strlen(rz) > 0){
-					strcpy(CommandID,"REDIS");
+				
+		if(strlen(xkj) > 0){
+			strcpy(CommandID,"REDIS");
 					
-					sprintf(Serial,"%ld%04d",time(NULL),SerialNum);
-					SerialNum++;	
+			sprintf(Serial,"%ld%04d",time(NULL),SerialNum);
+			SerialNum++;	
 					//if((SerialNum>=1000)||(SerialNum<0))	SerialNum=0;
-					memset(sendbuf,0,sizeof(sendbuf));	
-					sprintf(sendbuf,"@%04d|1|%s|%s|%s",
-						4+strlen(CommandID)+strlen(Serial)+strlen(xkj),CommandID,Serial,rz);
+			memset(sendbuf,0,sizeof(sendbuf));	
+			sprintf(sendbuf,"@%04d|1|%s|%s|%s",
+				4+strlen(CommandID)+strlen(Serial)+strlen(xkj),CommandID,Serial,xkj);
 						
-					if(0 > sendbuff(iSocket,sendbuf, strlen(sendbuf))){
-						printf("sendbuff error:%s\n",sendbuf);
-						continue;
-					}else{
-						iRet = recvbuff(iSocket,recvmsg,&iLen);
-						if(iRet > 0){ 
-							printf("receive ok:%s\n",recvmsg);
-						}else{
-							printf("receive fail:%s\n",sendbuf);
-						}
-					}
+				printf("socket send:%s\n",sendbuf);
+			if(0 > sendbuff(iSocket,sendbuf, strlen(sendbuf)) ){
+				printf("sendbuff error:%s\n",sendbuf);
+				continue;
+			}else{
+				iRet = recvbuff(iSocket,recvmsg,&iLen);
+				if(iRet > 0){ 
+					printf("receive ok:%s\n",recvmsg);
+				}else{
+					printf("receive fail:%s\n",sendbuf);
 				}
+			}
+		}
+				
+		if(strlen(rz) > 0){
+			strcpy(CommandID,"REDIS");
+					
+			sprintf(Serial,"%ld%04d",time(NULL),SerialNum);
+			SerialNum++;	
+					//if((SerialNum>=1000)||(SerialNum<0))	SerialNum=0;
+			memset(sendbuf,0,sizeof(sendbuf));	
+			sprintf(sendbuf,"@%04d|1|%s|%s|%s",
+				4+strlen(CommandID)+strlen(Serial)+strlen(rz),CommandID,Serial,rz);
+				
+			printf("socket send:%s\n",sendbuf);	
+			if(0 > sendbuff(iSocket,sendbuf, strlen(sendbuf))){
+				printf("sendbuff error:%s\n",sendbuf);
+				continue;
+			}else{
+				iRet = recvbuff(iSocket,recvmsg,&iLen);
+				if(iRet > 0){ 
+					printf("receive ok:%s\n",recvmsg);
+				}else{
+					printf("receive fail:%s\n",sendbuf);
+				}
+			}
+		}
 				
 				
 	}
