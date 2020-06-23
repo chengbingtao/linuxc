@@ -114,6 +114,8 @@ int sendbuff(int sock,char *sendmsg,int send_len)
 
 	//while(total < send_len)
 	//{
+		
+	
 		if ((slen=Send(sock, sendmsg, send_len )) < 0)
 		{
 			printf("socket send:%d,err:%s",slen,strerror(errno));
@@ -315,3 +317,29 @@ int cics_redis_data(int sockfd,char *business_name,char* list, int draw,void* da
 	return 0;
 }
 
+bool is_socket_closed(int clientSocket)  
+{  
+ char buff[32];  
+ int recvBytes = recv(clientSocket, buff, sizeof(buff), MSG_PEEK);  
+   
+ int sockErr = errno;  
+   
+ //cout << "In close function, recv " << recvBytes << " bytes, err " << sockErr << endl;  
+   
+ if( recvBytes > 0) //Get data  
+  return false;  
+   
+ if( (recvBytes == -1) && (sockErr == EWOULDBLOCK) ) //No receive data  
+  return false;  
+     
+ return true;  
+}
+
+void sendbuff2(SEND_CONTENT* psc){
+	int sock;
+	sock = init_socket(psc->ip,psc->port);
+	if(sock > 0)
+		 sendbuff(sock,psc->buff,psc->len);
+	else 
+		return;
+}

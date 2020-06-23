@@ -4,6 +4,7 @@
 #include "chengTools.h"
 #include "biTree.h"
 #include "zcSend.h"
+#include "threadpool.h"
 
 /*
 将流水内容复制到票内容，会影响效率，便于程序维护
@@ -413,8 +414,10 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long xszbmZdh[
 	long SerialNum;
 	int i,ifLsFs,h_dmsl,h_tmsl;
 	int iSocket=0,iRet=0,iLen;
-	char recvmsg[1024];
+	char recvmsg[2048];
 	long lRet;
+	struct my_threadpool* pThreadPool=NULL;
+	SEND_CONTENT par_send_content;
 	FileLength = get_file_size(piaoFile);
 	//流水库文件读取并处理
 	
@@ -476,16 +479,23 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long xszbmZdh[
 		strcpy(cTime,p+1);
 	}
 	
-	iSocket = init_socket(ip,port);
-	if(iSocket <=0) return -2;
+	//iSocket = init_socket(ip,port);
+	//if(iSocket <=0) return -2;
 	
 	//printf("481\n");
+	
+	pThreadPool = threadpool_init(10, 100);
+	
 	for(ttt=0;ttt<FileLength;ttt++){
 		
 		memset(&strPiao,0,sizeof(strPiao));
 		memset(xkj,0,sizeof(xkj));
 		memset(rz,0,sizeof(rz));
-		memset(code,0,sizeof(code));
+		memset(Code,0,sizeof(Code));
+		
+		//iSocket = init_socket(ip,port);
+		//if(iSocket <=0) return -2;
+		
 		fread(&strPiao,sizeof(strPiao),1,fp);
 		
 //				for(lRet =39999;lRet>=0;lRet--){
@@ -616,12 +626,24 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long xszbmZdh[
 			memset(sendbuf,0,sizeof(sendbuf));	
 			sprintf(sendbuf,"@%04d|1|%s|%s|%s",
 				4+strlen(CommandID)+strlen(Serial)+strlen(xkj),CommandID,Serial,xkj);
+				
+				
+				
 						
 				printf("socket send:%s\n",sendbuf);
-			if(0 > sendbuff(iSocket,sendbuf, strlen(sendbuf)) ){
-				printf("sendbuff error:%s\n",sendbuf);
+				
+				par_send_content.ip=ip;	//地址赋值
+				par_send_content.port=port;
+				par_send_content.buff=sendbuf;
+				par_send_content.len = strlen(sendbuf);
+				
+				i = threadpool_add_job(pThreadPool, sendbuff2, &par_send_content);
+				//i=sendbuff(iSocket,sendbuf, strlen(sendbuf));
+			if(0 > i ){
+				printf("sendbuff error return %d:%s\n",i,sendbuf);
 				continue;
 			}else{
+				memset(recvmsg,0,sizeof(recvmsg));
 				iRet = recvbuff(iSocket,recvmsg,&iLen);
 				if(iRet > 0){ 
 					printf("receive ok:%s\n",recvmsg);
@@ -641,11 +663,21 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long xszbmZdh[
 			sprintf(sendbuf,"@%04d|1|%s|%s|%s",
 				4+strlen(CommandID)+strlen(Serial)+strlen(rz),CommandID,Serial,rz);
 				
+			
 			printf("socket send:%s\n",sendbuf);	
-			if(0 > sendbuff(iSocket,sendbuf, strlen(sendbuf))){
-				printf("sendbuff error:%s\n",sendbuf);
+			
+			par_send_content.ip=ip;	//地址赋值
+			par_send_content.port=port;
+			par_send_content.buff=sendbuf;
+			par_send_content.len = strlen(sendbuf);
+				
+			i = threadpool_add_job(pThreadPool, sendbuff2, &par_send_content);
+			//i = sendbuff(iSocket,sendbuf, strlen(sendbuf));
+			if(0 > i){
+				printf("sendbuff error return %d:%s\n",i,sendbuf);
 				continue;
 			}else{
+				memset(recvmsg,0,sizeof(recvmsg));
 				iRet = recvbuff(iSocket,recvmsg,&iLen);
 				if(iRet > 0){ 
 					printf("receive ok:%s\n",recvmsg);
@@ -657,6 +689,7 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long xszbmZdh[
 				
 				
 	}
+	threadpool_destroy(pThreadPool);
 	
 	if(fp) fclose(fp);	
 }
