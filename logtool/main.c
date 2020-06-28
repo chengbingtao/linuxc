@@ -12,6 +12,8 @@
 #define MAX_LINE 2048
 #define PROFILE "profile.ini"
 
+#define TEST 1
+
 typedef struct _logData{
 	char lsh[20];
 	char cpkey[22];
@@ -366,6 +368,7 @@ int main(int argc, char* argv[]){
 	int iRet=0;
 	int i,iDateNum,i2;
 	int iRet2=0;
+	int if_yestoday=0;
 	char c[10];
 	//List listOut;	
 	ListElement *ple=NULL;
@@ -399,6 +402,31 @@ int main(int argc, char* argv[]){
 	long xszbmzdh[40000];
 	char jvwgIp[20];
 	unsigned int jvwgPort=0;
+	
+	
+//	#ifdef TEST
+//	SEND_CONTENT sendContent;
+//		memset(jvwgPath,0,sizeof(jvwgPath));
+//		strcpy(jvwgPath,"@0238|1|8798|15917263301591728798|DT_Region_List$0$1$4020,13110540048000080,23,10001,2020048,2020048,1,2020048,23011250,100008,1,1,,,,,,,,,2020-06-09 11:11:47,4.00,,1,1,1,1,00&02&0001&06040509112325020304$11:11:47$HLJHT11:11:47159172879611111$8");
+//		/*
+//		iRet = init_socket("10.10.10.150",9991);
+//		printf("socket=%d\n",iRet);
+//		iRet2 = sendbuff(iRet,jvwgPath,strlen(jvwgPath));
+//		printf("send return %d\n",iRet2);
+//		memset(ftpPath,0,sizeof(ftpPath));
+//		recvbuff(iRet,ftpPath,&iRet2);
+//		printf("recieve len=%d  :%s\n",iRet2,ftpPath);
+//		*/
+//			memset(&sendContent,0,sizeof(sendContent));
+//			sendContent.ip = "10.10.10.150";
+//			sendContent.port = 9991;
+//			sendContent.buff = jvwgPath;
+//			sendContent.len = strlen(jvwgPath);
+//			
+//			sendbuff2(&sendContent);
+//		
+//		return 0;
+//	#endif
 	
 	//download yestoday tzz file
 	memset(ftpPath,0,sizeof(ftpPath));
@@ -481,13 +509,22 @@ int main(int argc, char* argv[]){
 		printf("output ftp_pwd read from ini error:%s\n",PROFILE);
 		return -8;
 	}
-	
+	memset(c,0,sizeof(c));
+	readini(PROFILE,"output","if_yestoday",c);
+	if_yestoday = atoi(c);
 	//download namelist file
 	time(&tNow);
+	
+	//tm_to_datetime(ptmTmp,cFmtYestoday);
+		
+	if(if_yestoday==1){
+		tNow -= DAY_SECOND;
+
+	}
 	ptmTmp = localtime(&tNow);
 	memset(cFmtToday,0,sizeof(cFmtToday));
-	//tm_to_datetime(ptmTmp,cFmtYestoday);
-	sprintf(cFmtToday,"%04d%02d%02dout.log",ptmTmp->tm_year + 1900 ,ptmTmp->tm_mon + 1, ptmTmp->tm_mday);
+	sprintf(cFmtToday,"%04d%02d%02dout.log",ptmTmp->tm_year + 1900 ,ptmTmp->tm_mon + 1, ptmTmp->tm_mday);	
+		
 	sprintf(ftpPath2,"%s%s",ftpPath,cFmtToday);
 	
 	sprintf(localPath2,"%s%s",localPath,cFmtToday);
@@ -579,21 +616,22 @@ int main(int argc, char* argv[]){
 	list_destroy(&listOut);
 	*/
 	
-	memset(fmtNow,0,sizeof(fmtNow));
-	getSystemTime(fmtNow);
+	//memset(fmtNow,0,sizeof(fmtNow));
+	//getSystemTime(fmtNow);
 	//printf("=================%s=================\n",fmtNow);
 	//sprintf(fmtDate,"2020-05-22");
-	memset(fmtDate,0,sizeof(fmtDate));
-	strncpy(fmtDate,fmtNow,10);
+	//memset(fmtDate,0,sizeof(fmtDate));
+	//strncpy(fmtDate,fmtNow,10);
 	memset(jvwgPath,0,sizeof(jvwgPath));
 	readini("profile.ini","jvwgfile","path",jvwgPath);
 	
 	memset(retPath,0,sizeof(retPath));
 	readini("profile.ini","jvwgfile","return_path",retPath);
-	//memset(c,0,sizeof(c));
-	//strncpy(c,fmtDate,4);
-	sprintf(retFile,"%s%s.txt",retPath,fmtDate);
-	sprintf(keyFile,"%s%s.key",retPath,fmtDate);
+	
+	//sprintf(retFile,"%s%s.txt",retPath,fmtDate);
+	//sprintf(keyFile,"%s%s.key",retPath,fmtDate);
+	sprintf(retFile,"%slogfileret.txt",retPath);
+	sprintf(keyFile,"%ssendok.key",retPath);
 	
 	//printf("retFile=%s	keyFile=%s\n",retFile,keyFile);
 	//	goto gt636;	

@@ -142,7 +142,7 @@ int recvbuff(int sock,char *recvmsg,int *recv_len)
 	//rlen= recv(sock,recvmsg, *recv_len,0);
 	rlen = read(sock,recvmsg,*recv_len);
 //	logn("recvmsg:%s", recvmsg);
-	printf("read return %d\n",rlen);
+	printf("read return %d:%d\n",rlen,*recv_len);
 	if(rlen < 0)
 	{
 		//err = WSAGetLastError();
@@ -165,6 +165,7 @@ int recvpack(int sock, char* recvmsg, int* recv_len)
 	
 	if (!recvmsg || !recv_len || 6 >= *recv_len)
 	{
+		
 		return -1;
 	}
 	
@@ -173,6 +174,7 @@ int recvpack(int sock, char* recvmsg, int* recv_len)
 	while (6 > have_recv)
 	{
 		*recv_len = 6 - have_recv;
+		
 		rlen = recvbuff(sock, recvmsg + have_recv, recv_len);
 		
 		if (rlen <= 0)
@@ -337,9 +339,29 @@ bool is_socket_closed(int clientSocket)
 
 void sendbuff2(SEND_CONTENT* psc){
 	int sock;
+	int iRet;
+	char strRecv[1024];
+	int iLen;
 	sock = init_socket(psc->ip,psc->port);
-	if(sock > 0)
-		 sendbuff(sock,psc->buff,psc->len);
+	if(sock > 0){
+		//printf("ip=%s,port=%d\n",psc->ip,psc->port);
+		//printf("sendbuff begin fd=%d ;len=%d :%s\n",sock,psc->len,psc->buff);
+		iRet = sendbuff(sock,psc->buff,psc->len);
+		if(0 >= iRet)
+		 	printf("sendbuff error:%s\n",psc->buff);
+		 
+	  //printf("sendbuff return%d\n",iRet);
+	  memset(strRecv,0,sizeof(strRecv));
+	  
+	  iLen = sizeof(strRecv);
+	  recvpack(sock,strRecv,&iLen);
+	  //printf("recvbuff return %d:%s\n",iLen,strRecv);
+	  strncpy(psc->recv,strRecv,iLen);
+	  psc->recv_len = iLen;
+	}
 	else 
-		return;
+		printf("init_socket error\n");
+		
+	close(sock);	
+	return;
 }

@@ -116,7 +116,7 @@ void* threadpool_function(void* arg)
             pthread_mutex_unlock(&(pool->mutex));
             pthread_exit(NULL);
         }
-    printf("threadpool_function 111\n");
+    //printf("threadpool_function 111\n");
         pool->queue_cur_num--;
         pjob = pool->head;
         if (pool->queue_cur_num == 0)
@@ -127,22 +127,22 @@ void* threadpool_function(void* arg)
         {
             pool->head = pjob->next;
         }
-    printf("threadpool_function 222\n");
+    //printf("threadpool_function 222\n");
         if (pool->queue_cur_num == 0)
         {
             pthread_cond_signal(&(pool->queue_empty));        //队列为空，就可以通知threadpool_destroy函数，销毁线程函数
         }
-    printf("threadpool_function 333\n");
+   // printf("threadpool_function 333\n");
         if (pool->queue_cur_num == pool->queue_max_num - 1)
         {
             pthread_cond_broadcast(&(pool->queue_not_full));  //队列非满，就可以通知threadpool_add_job函数，添加新任务
         }
-    printf("threadpool_function 444\n");
+    //printf("threadpool_function 444\n");
         pthread_mutex_unlock(&(pool->mutex));
-    printf("threadpool_function 555\n");
+    //printf("threadpool_function 555\n");
         
         (*(pjob->callback_function))(pjob->arg);   //线程真正要做的工作，回调函数的调用
-    printf("threadpool_function 666\n");
+   // printf("threadpool_function 666\n");
         free(pjob);
         pjob = NULL;    
     }

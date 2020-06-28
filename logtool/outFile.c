@@ -402,6 +402,8 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long xszbmZdh[
 	struct piao  strPiao;
 	char xkj[2048];
 	char rz[2048];
+	char xkj2[2048];
+	char rz2[2048];
 	char Body[2048];
 	char sendbuf[2048];
 	long Xszbm8;
@@ -538,12 +540,20 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long xszbmZdh[
 					//Xszbm8需要转换,SerialNum需要实现
 				sprintf(xkj,"ND_Region_List$0$1$4020,%s,23,%s,%d,%d,1,%d,%d,,%s,1,,,,,,,,,%s %s,%d.00,,1,1,1,%d,%s$%s$HLJHT%s%03d11111$4",
 				       strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,1,cDate,cTime,strPiao.tzs*2,strPiao.tiaoshu,Code,cTime,cTime,SerialNum++);
-												//THead(sendbuf,Body);	       
+												//THead(sendbuf,Body);	
+												
+				if(strPiao.cpbz==0)
+					sprintf(xkj2,"ND_Region_List$0$1$4020,%s,23,%s,%d,%d,1,%d,%d,,%s,1,,,,,,,,,%s %s,%d.00,,1,1,1,%d,%s$%s$HLJHT%s%03d11111$4",
+				       strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,1,cDate,cTime,strPiao.tzs*2,strPiao.tiaoshu,Code,cTime,cTime,SerialNum++);
+												       
 			}
 					
 			sprintf(rz,"DT_Region_List$0$1$%s,%s,23,%s,%d,%d,1,%d,%d,%d,%d,1,,,,,,,,,%s %s,%d.00,,1,1,1,%d,%s$%s$HLJHT%s%03d11111$8",
 							 "4020",strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,strPiao.lsh,1,cDate,cTime,strPiao.tzs*2,strPiao.tiaoshu,Code,cTime,cTime,SerialNum++);
-					
+			if(strPiao.cpbz==0)		
+				sprintf(rz2,"DT_Region_List$0$1$%s,%s,23,%s,%d,%d,1,%d,%d,%d,%d,1,,,,,,,,,%s %s,%d.00,,1,1,1,%d,%s$%s$HLJHT%s%03d11111$8",
+							 "4020",strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,strPiao.lsh,1,cDate,cTime,strPiao.tzs*2,strPiao.tiaoshu,Code,cTime,cTime,SerialNum++);
+			
 		}
 		if(ifLsFs == 2){
 			if(strcmp(cWf,"lot")==0)
@@ -606,10 +616,18 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long xszbmZdh[
 				sprintf(xkj,"ND_Region_List$0$1$%s,%s,23,%s,%d,%d,1,%d,%d,,1,1,,,,,,,,,%s %s,%d.00,,1,1,1,1,%s$%s$HLJHT%s%03d11111$4",
 					   "4020",strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,cDate,cTime,strPiao.tzs*2,Code,cTime,cTime,SerialNum++);
 							//THead(sendbuf,Body);	
-				//printf("xkj=%s\n",xkj);				
+				//printf("xkj=%s\n",xkj);			
+				if(strPiao.cpbz == 0)
+						sprintf(xkj2,"ND_Region_List$0$1$%s,%s,23,%s,%d,%d,1,%d,%d,,1,1,,,,,,,,,%s %s,%d.00,,1,1,1,1,%s$%s$HLJHT%s%03d11111$4",
+					   "4020",strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,cDate,cTime,strPiao.tzs*2,Code,cTime,cTime,SerialNum++);
+				
 			}
 									
 			sprintf(rz,"DT_Region_List$0$1$%s,%s,23,%s,%d,%d,1,%d,%d,%d,1,1,,,,,,,,,%s %s,%d.00,,1,1,1,1,%s$%s$HLJHT%s%03d11111$8",
+					  				 "4020",strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,strPiao.lsh,cDate,cTime,strPiao.tzs*2,Code,cTime,cTime,SerialNum++);////
+			
+			if(strPiao.cpbz==0)
+				sprintf(rz2,"DT_Region_List$0$1$%s,%s,23,%s,%d,%d,1,%d,%d,%d,1,1,,,,,,,,,%s %s,%d.00,,1,1,1,1,%s$%s$HLJHT%s%03d11111$8",
 					  				 "4020",strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,strPiao.lsh,cDate,cTime,strPiao.tzs*2,Code,cTime,cTime,SerialNum++);////
 					  				 
 			//printf("rz=%s\n",rz);		  		
@@ -630,7 +648,9 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long xszbmZdh[
 				
 				
 						
-				printf("socket send:%s\n",sendbuf);
+				//printf("socket send:%s\n",sendbuf);
+				
+				memset(&par_send_content,0,sizeof(par_send_content));
 				
 				par_send_content.ip=ip;	//地址赋值
 				par_send_content.port=port;
@@ -643,13 +663,39 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long xszbmZdh[
 				printf("sendbuff error return %d:%s\n",i,sendbuf);
 				continue;
 			}else{
-				memset(recvmsg,0,sizeof(recvmsg));
-				iRet = recvbuff(iSocket,recvmsg,&iLen);
-				if(iRet > 0){ 
-					printf("receive ok:%s\n",recvmsg);
-				}else{
-					printf("receive fail:%s\n",sendbuf);
-				}
+				printf("recieve:%s\n",par_send_content.recv);
+			}
+		}
+		
+		if(strlen(xkj2) > 0){
+			strcpy(CommandID,"REDIS");
+					
+			sprintf(Serial,"%ld%04d",time(NULL),SerialNum);
+			SerialNum++;	
+					//if((SerialNum>=1000)||(SerialNum<0))	SerialNum=0;
+			memset(sendbuf,0,sizeof(sendbuf));	
+			sprintf(sendbuf,"@%04d|1|%s|%s|%s",
+				4+strlen(CommandID)+strlen(Serial)+strlen(xkj2),CommandID,Serial,xkj2);
+				
+				
+				
+						
+				//printf("socket send:%s\n",sendbuf);
+				
+				memset(&par_send_content,0,sizeof(par_send_content));
+				
+				par_send_content.ip=ip;	//地址赋值
+				par_send_content.port=port;
+				par_send_content.buff=sendbuf;
+				par_send_content.len = strlen(sendbuf);
+				
+				i = threadpool_add_job(pThreadPool, sendbuff2, &par_send_content);
+				//i=sendbuff(iSocket,sendbuf, strlen(sendbuf));
+			if(0 > i ){
+				printf("sendbuff error return %d:%s\n",i,sendbuf);
+				continue;
+			}else{
+				printf("recieve:%s\n",par_send_content.recv);
 			}
 		}
 				
@@ -658,32 +704,52 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long xszbmZdh[
 					
 			sprintf(Serial,"%ld%04d",time(NULL),SerialNum);
 			SerialNum++;	
-					//if((SerialNum>=1000)||(SerialNum<0))	SerialNum=0;
+					
 			memset(sendbuf,0,sizeof(sendbuf));	
 			sprintf(sendbuf,"@%04d|1|%s|%s|%s",
 				4+strlen(CommandID)+strlen(Serial)+strlen(rz),CommandID,Serial,rz);
 				
-			
-			printf("socket send:%s\n",sendbuf);	
-			
+
 			par_send_content.ip=ip;	//地址赋值
 			par_send_content.port=port;
 			par_send_content.buff=sendbuf;
 			par_send_content.len = strlen(sendbuf);
 				
 			i = threadpool_add_job(pThreadPool, sendbuff2, &par_send_content);
-			//i = sendbuff(iSocket,sendbuf, strlen(sendbuf));
+			
 			if(0 > i){
 				printf("sendbuff error return %d:%s\n",i,sendbuf);
 				continue;
 			}else{
-				memset(recvmsg,0,sizeof(recvmsg));
-				iRet = recvbuff(iSocket,recvmsg,&iLen);
-				if(iRet > 0){ 
-					printf("receive ok:%s\n",recvmsg);
-				}else{
-					printf("receive fail:%s\n",sendbuf);
-				}
+				printf("recieve:%s\n",par_send_content.recv);
+				
+			}
+		}
+		
+		if(strlen(rz2) > 0){
+			strcpy(CommandID,"REDIS");
+					
+			sprintf(Serial,"%ld%04d",time(NULL),SerialNum);
+			SerialNum++;	
+					
+			memset(sendbuf,0,sizeof(sendbuf));	
+			sprintf(sendbuf,"@%04d|1|%s|%s|%s",
+				4+strlen(CommandID)+strlen(Serial)+strlen(rz2),CommandID,Serial,rz2);
+				
+
+			par_send_content.ip=ip;	//地址赋值
+			par_send_content.port=port;
+			par_send_content.buff=sendbuf;
+			par_send_content.len = strlen(sendbuf);
+				
+			i = threadpool_add_job(pThreadPool, sendbuff2, &par_send_content);
+			
+			if(0 > i){
+				printf("sendbuff error return %d:%s\n",i,sendbuf);
+				continue;
+			}else{
+				printf("recieve:%s\n",par_send_content.recv);
+				
 			}
 		}
 				

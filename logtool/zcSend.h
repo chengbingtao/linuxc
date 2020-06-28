@@ -19,6 +19,8 @@ typedef struct sendcontent_{
 	int   port;
 	char* buff;
 	int   len;
+	char recv[2048];
+	int   recv_len;
 } SEND_CONTENT;
 
 int sendbuff(int sock,char *sendmsg,int send_len);
