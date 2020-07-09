@@ -14,6 +14,8 @@
 
 #define TEST 1
 
+time_t GLOBAL_NOW;
+
 typedef struct _logData{
 	char lsh[20];
 	char cpkey[22];
@@ -239,6 +241,15 @@ unsigned long PutKeyToTree(BiTree* pBiTree,char* keyFile)
 	FILE* fpKey=NULL;
 	char cLine[18];
 	unsigned long ul_1=0;
+	
+	if(access(keyFile,F_OK) != 0) {
+		
+		memset(cLine,'0',17);
+		cLine[17]='\0';
+		insertNode(pBiTree,cLine);
+		
+		return 1;	
+	}
 	fpKey = fopen(keyFile,"r");
 	memset(cLine,0,sizeof(cLine));
 	while(fread(cLine,17,1,fpKey) != NULL){
@@ -384,6 +395,7 @@ int main(int argc, char* argv[]){
 	char jvwgFileArray[100][1024];
 	char outFileArray[100][1024];
 	char dateArray[100][11];
+	int outFileCount=0;
 	unsigned long recNum;
 	List list4020,list4030;
 	StrLogData *psld=NULL;
@@ -396,13 +408,25 @@ int main(int argc, char* argv[]){
 	char localPath2[1024];
 	char ftpUser[128];
 	char ftpPwd[128];	
+	char argcTime[20];
+	char sendFile[30];
 	time_t tNow,tYestoday;
 	struct tm *ptmTmp;
+	struct tm tmTmp2;
 	char cFmtYestodayTzz[20],cFmtToday[20];
 	long xszbmzdh[40000];
 	char jvwgIp[20];
 	unsigned int jvwgPort=0;
 	
+	//printf("argc=%d,argv=%s\n",argc,argv[1]); //argc=2,argv=aa
+	//return ;
+	if(argc == 2){
+		if(strlen(argv[1]) != 10){
+			printf("argument mast be:YYYY-mm-DD\n");
+			return;
+		}
+	}
+	sprintf(argcTime,"%s 01:01:01",argv[1]);
 	
 //	#ifdef TEST
 //	SEND_CONTENT sendContent;
@@ -454,7 +478,15 @@ int main(int argc, char* argv[]){
 		return -4;
 	}
 	
-	time(&tNow);
+	if(argc == 2){
+		memset(&tmTmp2,0,sizeof(tmTmp2));
+		datetime_to_tm(argcTime,&tmTmp2);
+		tNow = mktime(&tmTmp2);
+		printf("1tmtmp2:%d-%d-%d \n",tmTmp2.tm_year+1900,tmTmp2.tm_mon+1,tmTmp2.tm_mday);
+	}else{
+		time(&tNow);
+	}
+		
 	tNow -= DAY_SECOND;
 	ptmTmp = localtime(&tNow);
 	memset(cFmtYestodayTzz,0,sizeof(cFmtYestodayTzz));
@@ -513,7 +545,14 @@ int main(int argc, char* argv[]){
 	readini(PROFILE,"output","if_yestoday",c);
 	if_yestoday = atoi(c);
 	//download namelist file
-	time(&tNow);
+	if(argc == 2){
+		memset(&tmTmp2,0,sizeof(tmTmp2));
+		datetime_to_tm(argcTime,&tmTmp2);
+		printf("2tmtmp2:%d-%d-%d \n",tmTmp2.tm_year+1900,tmTmp2.tm_mon+1,tmTmp2.tm_mday);
+		tNow = mktime(&tmTmp2);
+	}else{
+		time(&tNow);
+	}
 	
 	//tm_to_datetime(ptmTmp,cFmtYestoday);
 		
@@ -530,7 +569,7 @@ int main(int argc, char* argv[]){
 	sprintf(localPath2,"%s%s",localPath,cFmtToday);
 	downloadsimple(ftpUser,ftpPwd,ftpPath2,localPath2);
 	
-	printf("================download output file name:%s over!================\n",localPath2);
+	printf("================download outlog file name:%s over!================\n",localPath2);
 	
 	memset(outFileArray,0,sizeof(outFileArray));
 	//printf("outFile path=%s\n",localPath2);
@@ -539,7 +578,7 @@ int main(int argc, char* argv[]){
 		printf("there is not output's names in file %s\n",localPath2);
 		return -9;
 	}
-	printf("================read output file name over!================\n" );
+	printf("================read outlog file name over!================\n" );
 	
 	
 	
@@ -563,6 +602,7 @@ int main(int argc, char* argv[]){
 	
 	//download output file
 	printf("================download output file begin!================\n");
+	outFileCount = iRet;
 	for(i=0;i<iRet;i++){
 		sprintf(ftpPath2,"%s%s",ftpPath,outFileArray[i]);
 		sprintf(localPath2,"%s%s",localPath,outFileArray[i]);
@@ -694,12 +734,20 @@ int main(int argc, char* argv[]){
 	readini(PROFILE,"jvwgfile","port",c);
 	jvwgPort = atoi(c);
 	printf("java netgate ip:%s\tport:%d\n",jvwgIp,jvwgPort);
+	
+	time(&tNow);
+	ptmTmp = localtime(&tNow);
+	memset(sendFile,0,sizeof(sendFile));
+	sprintf(sendFile,"./%04d-%02d-%02d.send2",ptmTmp->tm_year + 1900 ,ptmTmp->tm_mon + 1, ptmTmp->tm_mday);	
+		
+	if(0==access(sendFile,F_OK)) remove(sendFile);
+	
 	for(i=0;i<iRet;i++){
 		if(-1==access(outFileArray[i],F_OK)) break;
 		printf("begin compareTicket:%s\n",outFileArray[i]);
 		
 		if(0 < compareTicket(outFileArray[i],&biTreeKey)){
-			printf("main 659\n");
+			
 			sprintf(jvwgFile,"%s_N",outFileArray[i]);
 			iRet2 = sendXkjRz(jvwgFile,jvwgIp,jvwgPort,xszbmzdh);
 			if(iRet2 <= 0){
@@ -715,8 +763,63 @@ int main(int argc, char* argv[]){
 		deleteNode2(&biTreeKey, pTreeNode); 
 	}
 	
+	memset(localPath,0,sizeof(localPath));
+	readini(PROFILE,"output","local_path",localPath);
+	if(strlen(localPath)==0){
+		printf("output localPath read from ini error:%s\n",PROFILE);
+		return -6;
+	}
+	//删除out文件及out_N文件
+	for(i=0;i<outFileCount;i++){
+		sprintf(retPath,"%s",outFileArray[i]);
+		printf("%s will be deleted!\n",retPath);
+		if(0==access(retPath,F_OK)) remove (retPath);
+			
+		sprintf(retPath,"%s%s_N",localPath,outFileArray[i]);
+		printf("%s will be deleted!\n",retPath);
+		if(0==access(retPath,F_OK)) remove (retPath);	
+	}
+	printf("===============out file deleted over!===============\n");
 	
+	//删除10天前send2文件和sendfail文件，tzz文件，date.log,out.log
+	memset(localPath,0,sizeof(localPath));
+	readini(PROFILE,"tzz","local_path",localPath);
+	if(strlen(localPath)==0){
+		printf("tzz localPath read from ini error:%s\n",PROFILE);
+		return -2;
+	}
+	time(&tNow);
+	tNow -= DAY_SECOND * 10;
+	ptmTmp = localtime(&tNow);
+	sprintf(retPath,"%sdn%04d%02d%02d.tzz",localPath,ptmTmp->tm_year + 1900 ,ptmTmp->tm_mon + 1, ptmTmp->tm_mday);
+	if(0==access(retPath,F_OK)) remove (retPath);	
+	printf("===============10 days before tzz file deleted over!===============\n");		
 	
+	memset(localPath,0,sizeof(localPath));
+	readini(PROFILE,"output","local_path",localPath);
+	if(strlen(localPath)==0){
+		printf("output localPath read from ini error:%s\n",PROFILE);
+		return -6;
+	}
+	sprintf(retPath,"%s%04d%02d%02dout.log",localPath,ptmTmp->tm_year + 1900 ,ptmTmp->tm_mon + 1, ptmTmp->tm_mday);
+	printf("%s will be deleted!\n",retPath);
+	if(0==access(retPath,F_OK)) remove (retPath);	
+	printf("===============10 days before outlog file deleted over!===============\n");	
+	sprintf(retPath,"%s%04d%02d%02ddate.log",localPath,ptmTmp->tm_year + 1900 ,ptmTmp->tm_mon + 1, ptmTmp->tm_mday);
+	printf("%s will be deleted!\n",retPath);
+	if(0==access(retPath,F_OK)) remove (retPath);	
+	printf("===============10 days before datelog file deleted over!===============\n");	
+	
+	sprintf(retPath,"./%04d-%02d-%02d.send2",ptmTmp->tm_year + 1900 ,ptmTmp->tm_mon + 1, ptmTmp->tm_mday);
+	printf("%s will be deleted!\n",retPath);
+	if(0==access(retPath,F_OK)) remove (retPath);	
+	printf("===============10 days before send file deleted over!===============\n");	
+	sprintf(retPath,"./%04d-%02d-%02d.sendfail",ptmTmp->tm_year + 1900 ,ptmTmp->tm_mon + 1, ptmTmp->tm_mday);
+	printf("%s will be deleted!\n",retPath);
+	if(0==access(retPath,F_OK)) remove (retPath);	
+	printf("===============10 days before sendfail file deleted over!===============\n");	
+	
+	printf("====================SUCCESS====================\n");
 	exit(0);
 
 

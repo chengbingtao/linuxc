@@ -54,7 +54,7 @@ int init_socket(char *ip,unsigned int port)
 	}
 	
 	//设置发送接收超时
-	time_out.tv_sec = 1;
+	time_out.tv_sec = 2;
 	time_out.tv_usec = 0;
 	ret = setsockopt(sock,SOL_SOCKET,SO_SNDTIMEO,&time_out,sizeof(time_out));
 	if(ret!=0){
@@ -65,26 +65,31 @@ int init_socket(char *ip,unsigned int port)
 		printf("setsockopt error:recvieve timeout return %d,%s\n",ret,strerror(errno));
 	}
 	
+	
+	
 	serveraddr.sin_family = AF_INET;
 	serveraddr.sin_addr.s_addr = inet_addr(ip);
 	serveraddr.sin_port = htons((short)port);
 	
 	ret = connect(sock, (struct sockaddr*)&serveraddr, sizeof(serveraddr));
+	
+//	fcntl(sock,F_SETFL,fcntl(sock,F_GETFL,0)|O_NONBLOCK);//设置为非阻塞模式  
+//	if(ret = select(sock+1, NULL, &r, NULL, &time_out) > 0)
+//  {
+//         // getsockopt(sock, SOL_SOCKET, SO_ERROR, (char *)&error, /*(socklen_t *)*/&len);
+//          if(error != 0) ret = -5;	
+//  } 
 	if (0 > ret)
 	{
 			FD_ZERO(&r);
 			FD_SET(sock, &r);
 			time_out.tv_sec = 0; //连接超时3秒
 			time_out.tv_usec =500*1000;
-		  if( select(sock+1, NULL, &r, NULL, &time_out) > 0)
-      {
-         // getsockopt(sock, SOL_SOCKET, SO_ERROR, (char *)&error, /*(socklen_t *)*/&len);
-          if(error != 0) ret = -5;	
-      } 
-      else
-      {
-          ret = -6;
-      }
+		  
+//      else
+//      {
+//          ret = -6;
+//      }
       if(ret!=0)
       {
       	//logn("connect is error,error:%d,ret=%d",error,ret);
@@ -125,7 +130,7 @@ int sendbuff(int sock,char *sendmsg,int send_len)
 		//total += slen;	
 		//logn("total:%d,slen:%d",total,slen);
 	//}	
-	printf("send ok!\n");
+	//printf("Send ok!\n");
 	return slen;
 }
 
@@ -139,10 +144,10 @@ int recvbuff(int sock,char *recvmsg,int *recv_len)
 		return -1;
 	}
 
-	//rlen= recv(sock,recvmsg, *recv_len,0);
-	rlen = read(sock,recvmsg,*recv_len);
+	rlen= recv(sock,recvmsg, *recv_len,0);
+	//rlen = read(sock,recvmsg,*recv_len);
 //	logn("recvmsg:%s", recvmsg);
-	printf("read return %d:%d\n",rlen,*recv_len);
+	//printf("read return %d:%d\n",rlen,*recv_len);
 	if(rlen < 0)
 	{
 		//err = WSAGetLastError();
@@ -342,13 +347,78 @@ void sendbuff2(SEND_CONTENT* psc){
 	int iRet;
 	char strRecv[1024];
 	int iLen;
-	sock = init_socket(psc->ip,psc->port);
-	if(sock > 0){
-		//printf("ip=%s,port=%d\n",psc->ip,psc->port);
+	fd_set fdr;
+	fd_set fdw;
+	struct timeval timeo;
+	int max_cycle=10;
+	int one_cycle=0;
+	
+	timeo.tv_sec = 4; //连接超时
+	timeo.tv_usec =0; 
+	FD_ZERO(&fdr); 
+	FD_ZERO(&fdw);
+	while(1) {
+		one_cycle++;
+		sock = init_socket(psc->ip,psc->port);
+		if(sock <= 0){
+			if(one_cycle > max_cycle){
+					printf("init_socket error return %d,ref=%s\n",sock,psc->buff);
+					goto error;
+			}else 
+			{
+				close(sock);
+				continue;
+			}
+			
+		}
+	
+		
 		//printf("sendbuff begin fd=%d ;len=%d :%s\n",sock,psc->len,psc->buff);
 		iRet = sendbuff(sock,psc->buff,psc->len);
-		if(0 >= iRet)
-		 	printf("sendbuff error:%s\n",psc->buff);
+		if(0 >= iRet){
+			if(one_cycle > max_cycle){
+				printf("sendbuff error:%s\n",psc->buff);
+					
+					break;
+			}else 
+			{
+				close(sock);
+				continue;
+			}
+			
+		}
+		 	
+		 	
+		FD_SET(sock, &fdr);  	
+		//iRet = select(0, &fdr, 0, 0, &timeo);
+		iRet = select(sock+1, &fdr, 0, 0,&timeo); 
+		if ( iRet == 0 ) 
+		{
+			if(one_cycle > max_cycle){
+				printf("socket select timeout:errinfo=%s;buff=%s\n",strerror(errno),psc->buff);
+					
+				goto error;
+			}else 
+			{
+				close(sock);
+				continue;
+			}
+			
+		} 
+		if ( iRet < 0 ) 
+		{
+			if(one_cycle > max_cycle){
+				printf("socket select error:%s;buff=%s\n",strerror(errno),psc->buff);
+					
+				goto error;
+			}else 
+			{
+				close(sock);
+				continue;
+				close(sock);
+				continue;
+			}
+		} 	
 		 
 	  //printf("sendbuff return%d\n",iRet);
 	  memset(strRecv,0,sizeof(strRecv));
@@ -356,12 +426,39 @@ void sendbuff2(SEND_CONTENT* psc){
 	  iLen = sizeof(strRecv);
 	  recvpack(sock,strRecv,&iLen);
 	  //printf("recvbuff return %d:%s\n",iLen,strRecv);
-	  strncpy(psc->recv,strRecv,iLen);
-	  psc->recv_len = iLen;
-	}
-	else 
-		printf("init_socket error\n");
+	  if(iLen < 6){
+	  	close(sock);
+	  	continue;
+	  	if(one_cycle > max_cycle){
+		  	printf("receive error:%s\n",psc->buff);
+		  	continue;
+		  }else{
+		  	close(sock);
+				continue;
+		  }
+	  }
+	  else{
+	  	
+	  	strncpy(psc->recv,strRecv,iLen);
+	  	psc->recv_len = iLen;
+	  	//正常退出
+	  	close(sock);
+	  	return;
+	  }
+	  
+	  
+	  
+	
+	}	
+	
+	
+	error:
+		close(sock);	
 		
-	close(sock);	
-	return;
+		pthread_mutex_lock(&errInfoLock); /* 阻塞的锁定互斥锁 */
+		write(iErrInfoHandle,psc->buff,strlen(psc->buff));
+		write(iErrInfoHandle,"\r\n",strlen("\r\n"));
+		pthread_mutex_unlock(&errInfoLock);/* 解锁互斥锁 */
+	
+		return;
 }

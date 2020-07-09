@@ -25,3 +25,7 @@ setsebool -P ftp_home_dir 1
 
 ssh中文乱码
 export LC_ALL=zh_CN.GB2312;export LANG=zh_CN.GB2312
+
+export LC_ALL=zh_CN.UTF-8;export LANG=zh_CN.UTF-8
+
+#测试日期，有7月3日的

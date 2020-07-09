@@ -6,6 +6,9 @@
 #include "zcSend.h"
 #include "threadpool.h"
 
+#define XKJ_SEND 0
+#define CommandID "REDIS"
+
 /*
 将流水内容复制到票内容，会影响效率，便于程序维护
 */
@@ -23,7 +26,7 @@ int lscopy(struct lsnr* ls,struct piao *piao){
 	piao->tmsl = ls->tmsl;
 	//0-9 第一注；10-19第二注；。。。40-49第五注
 	if(1 <=ls->dnz && 5>= ls->dnz)
-		if(NULL==memcpy(piao->tz + (ls->dnz - 1) * 10,ls->tz,8)) return -1;
+		if(NULL==memcpy(piao->tz + (ls->dnz - 1) * 10,ls->tz,sizeof(int) * 8)) return -1;
 	piao->lsdt=ls->lsdt;
 	piao->ifdq = ls->ifdq;
 	
@@ -190,6 +193,7 @@ unsigned long compareTicket_(char* FileName,BiTree *keyTree,char* tgtFile){
 	char 	keyZhu[22];
 	long 	lastdis,ttt;
 	int		FileNo;
+	
 	FILE	*lsk=NULL;
 	FILE  *fpTgt=NULL;
 	int lsOrFs=-1;
@@ -197,11 +201,12 @@ unsigned long compareTicket_(char* FileName,BiTree *keyTree,char* tgtFile){
 	int zhushu=0;
 	struct	lsnr sthout1;
 	struct	fsnr sthout2;
-	struct  piao *strPiao;
+	struct  piao strPiao;
 	BiTreeNode *pNode=NULL;
 	
 	
 	FileLength = get_file_size(FileName);
+	if(0==FileLength) return 0;
 	//流水库文件读取并处理
 	if(strstr(FileName,"ls") || strstr(FileName,"LS") ){
 		lsOrFs=1;
@@ -262,41 +267,46 @@ unsigned long compareTicket_(char* FileName,BiTree *keyTree,char* tgtFile){
 			
 			if(ttt > 0){
 				if(lsOrFs==1){
-					if(strcmp(strPiao->cpkey,sthout1.cpkey) != 0){
+					if(strcmp(strPiao.cpkey,sthout1.cpkey) != 0){
 						//票结构体
-						strPiao->tiaoshu = tiaoshu;
-						strPiao->tzs = zhushu;
+						strPiao.tiaoshu = tiaoshu;
+						strPiao.tzs = zhushu;
 						tiaoshu=0;
 						zhushu=0;
 						//记录该票到存储结构
 						//printf("piao key:%s\n",strPiao->cpkey);
 						//i=list_insert_next(listRet,NULL, strPiao);
 						//if(i==-1) return -4;
-						pNode = search(keyTree, strPiao->cpkey);
+						pNode = search(keyTree, strPiao.cpkey);
 						if(pNode){
 							//printf("%s\t",pNode->data);
 							deleteNode2(keyTree, pNode);
 						}else{
 							//printf("send javawg:write to fpTgt 3,key=%s\n",strPiao->cpkey);
 							//send javawg
-							if((fwrite(strPiao,sizeof(struct piao),1,fpTgt))!=1) 
-								printf("write to %s error:zdh=%d,key=%s\n",tgtFile,strPiao->xszbm,strPiao->cpkey);
+							if((fwrite(&strPiao,sizeof(struct piao),1,fpTgt))!=1) 
+								printf("write to %s error:zdh=%d,key=%s\n",tgtFile,strPiao.xszbm,strPiao.cpkey);
 						}
+						//printf("piao content:key=%s;ts=%d,zs=%d,tz=",strPiao.cpkey,strPiao.tiaoshu,strPiao.tzs);
+						//for(i=0;i<49;i++) printf("%d,",strPiao.tz[i]);
+						//printf("\n");
+						//strPiao = malloc(sizeof(struct piao));
+						memset(&strPiao,0,sizeof(struct piao));
 						lastdis++;	
 					}
 				}
 				if(lsOrFs==2){
-					if(strcmp(strPiao->cpkey,sthout2.cpkey) != 0){
+					if(strcmp(strPiao.cpkey,sthout2.cpkey) != 0){
 						//票结构体
-						strPiao->tiaoshu = tiaoshu;
-						strPiao->tzs = zhushu;
+						strPiao.tiaoshu = tiaoshu;
+						strPiao.tzs = zhushu;
 						tiaoshu=0;
 						zhushu=0;
 						//记录该票到存储结构
 						//printf("piao key:%s\n",strPiao->cpkey);
 //						i=list_insert_next(listRet,NULL, strPiao);
 //						if(i==-1) return -4;
-							pNode = search(keyTree, strPiao->cpkey);
+							pNode = search(keyTree, strPiao.cpkey);
 							if(pNode){
 								
 								//printf("%s\t",pNode->data);
@@ -304,9 +314,11 @@ unsigned long compareTicket_(char* FileName,BiTree *keyTree,char* tgtFile){
 							}else{
 								//printf("send javawg:write to fpTgt 2,key=%s\n",strPiao->cpkey);
 								//send javawg
-								if((fwrite(strPiao,sizeof(struct piao),1,fpTgt))!=1) 
-								printf("write to %s error:zdh=%d,key=%s\n",tgtFile,strPiao->xszbm,strPiao->cpkey);
+								if((fwrite(&strPiao,sizeof(struct piao),1,fpTgt))!=1) 
+								printf("write to %s error:zdh=%d,key=%s\n",tgtFile,strPiao.xszbm,strPiao.cpkey);
 							}
+							//strPiao = malloc(sizeof(struct piao));
+							memset(&strPiao,0,sizeof(struct piao));
 
 						lastdis++;	
 					}	
@@ -316,10 +328,10 @@ unsigned long compareTicket_(char* FileName,BiTree *keyTree,char* tgtFile){
 			
 			if(lsOrFs==1){
 					memset(keyZhu,0,sizeof(keyZhu));
-					strPiao = malloc(sizeof(struct piao));
-					memset(strPiao,0,sizeof(struct piao));
+					//strPiao = malloc(sizeof(struct piao));
+					//memset(strPiao,0,sizeof(struct piao));
 					//strcpy(keyZhu,sthout1.cpkey);
-					if(-1 == lscopy(&sthout1,strPiao)){
+					if(-1 == lscopy(&sthout1,&strPiao)){
 						//记录一下，但不需要停
 						
 					}
@@ -329,9 +341,9 @@ unsigned long compareTicket_(char* FileName,BiTree *keyTree,char* tgtFile){
 			
 			if(lsOrFs == 2){
 					memset(keyZhu,0,sizeof(keyZhu));
-					strPiao = malloc(sizeof(struct piao));
-					memset(strPiao,0,sizeof(struct piao));
-					if(-1 == fscopy(&sthout2,strPiao)){
+					//strPiao = malloc(sizeof(struct piao));
+					//memset(strPiao,0,sizeof(struct piao));
+					if(-1 == fscopy(&sthout2,&strPiao)){
 						//记录一下
 					}
 					zhushu += sthout2.tzs;
@@ -340,14 +352,14 @@ unsigned long compareTicket_(char* FileName,BiTree *keyTree,char* tgtFile){
 			tiaoshu++;
 	}
 	//最后一票
-		strPiao->tiaoshu = tiaoshu;
-		
+		strPiao.tiaoshu = tiaoshu;
+		strPiao.tzs = zhushu;
 		//记录该票到存储结构
 		//printf("piao key:%s\n",strPiao->cpkey);
 		//i=list_insert_next(listRet,NULL, strPiao);			
 		//if(i==-1) return -5;
 			
-		pNode = search(keyTree, strPiao->cpkey);
+		pNode = search(keyTree, strPiao.cpkey);
 		if(pNode){
 			//printf("%s\t",pNode->data);
 			deleteNode2(keyTree, pNode);
@@ -355,8 +367,12 @@ unsigned long compareTicket_(char* FileName,BiTree *keyTree,char* tgtFile){
 		}else{
 			//printf("send javawg:write to fpTgt 1,key=%s\n",strPiao->cpkey);
 			//send javawg
-			if((fwrite(strPiao,sizeof(struct piao),1,fpTgt))!=1) 
-								printf("write to %s error:zdh=%d,key=%s\n",tgtFile,strPiao->xszbm,strPiao->cpkey);
+			if((fwrite(&strPiao,sizeof(struct piao),1,fpTgt))!=1) 
+								printf("write to %s error:zdh=%d,key=%s\n",tgtFile,strPiao.xszbm,strPiao.cpkey);
+								
+			//printf("piao content:key=%s;ts=%d,zs=%d,tz=",strPiao.cpkey,strPiao.tiaoshu,strPiao.tzs);
+			//for(i=0;i<49;i++) printf("%d,",strPiao.tz[i]);
+			//printf("\n");					
 		}
 			
 		lastdis++;	
@@ -398,30 +414,42 @@ unsigned long compareTicket(char* FileName,BiTree *keyTree){
 unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long xszbmZdh[])
 {
 	FILE *fp = NULL;
+	FILE *fpSendBack=NULL;
+	int ifdSendBack=0;
 	unsigned long FileLength,fl,ttt;
 	struct piao  strPiao;
-	char xkj[2048];
-	char rz[2048];
-	char xkj2[2048];
-	char rz2[2048];
-	char Body[2048];
-	char sendbuf[2048];
+	char sendBackFile[1024];
+	char xkj[1024];
+	char rz[1024];
+	char xkj2[1024];
+	char rz2[1024];
+	//char Body[2048];
+	char sendbuf[1024];
 	long Xszbm8;
 	char cWf[5];
 	char cYxbm[6];
 	char *p=NULL;
 	char Code[200];
 	char cDate[11],cTime[9],cDatetime[20];
-	char CommandID[10],Serial[10];
-	long SerialNum;
+	char cDatetimeSimple[20];
+	char cDate6[7];
+	char ywlsh[20];
+	time_t now;
+	struct tm *timeNow;
+	size_t readSize=0;
+	//char CommandID[12],Serial[10];
+	char Serial[10];
+	unsigned long SerialNum;
+	int iSeriaNum=0;
 	int i,ifLsFs,h_dmsl,h_tmsl;
 	int iSocket=0,iRet=0,iLen;
 	char recvmsg[2048];
 	long lRet;
 	struct my_threadpool* pThreadPool=NULL;
-	SEND_CONTENT par_send_content;
+	SEND_CONTENT *par_send_content;
 	FileLength = get_file_size(piaoFile);
 	//流水库文件读取并处理
+	if(0==FileLength) return 0;
 	
 	if((FileLength%sizeof(struct piao))!=0) 
 	{ 
@@ -471,8 +499,10 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long xszbmZdh[
 	printf("%d tickets in file %s\n",FileLength,piaoFile);
 	fp = fopen(piaoFile,"rb");
 	
+	
+	
 	memset(cDatetime,0,sizeof(cDatetime));
-	if(SerialNum = getSystemTime( cDatetime)){
+	if( getSystemTime( cDatetime)){
 		memset(cDate,0,sizeof(cDate));
 		strncpy(cDate,cDatetime,10);
 		
@@ -481,6 +511,26 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long xszbmZdh[
 		strcpy(cTime,p+1);
 	}
 	
+	time(&now);
+	SerialNum = (unsigned long)now;
+	timeNow = localtime(&now);
+	sprintf(cDatetimeSimple,"%d%02d%02d%02d%02d%02d",timeNow->tm_year+1900,timeNow->tm_mon+1,timeNow->tm_mday,timeNow->tm_hour,timeNow->tm_min,timeNow->tm_sec);
+	sprintf(cDate6,"%02d%02d%02d",timeNow->tm_year-100,timeNow->tm_mon+1,timeNow->tm_mday);
+	
+	//sprintf(sendBackFile,"./%s.send",cDate);
+	//fpSendBack = fopen(sendBackFile,"wb");
+	//if(fpSendBack <=0){
+	//	printf("%s file fopen error:%s\n",sendBackFile,strerror(errno));
+	//}
+	sprintf(sendBackFile,"./%s.send2",cDate);
+	
+	ifdSendBack = open(sendBackFile,O_WRONLY|O_CREAT|O_APPEND);
+	if(ifdSendBack == -1){
+		printf("%s file open error:%s\n",sendBackFile,strerror(errno));
+	}
+//	fwrite(cDate,strlen(cDate),1,fpSendBack);
+//	fwrite(cDate,strlen(cDate),1,fpSendBack);
+//	fwrite(cDate,strlen(cDate),1,fpSendBack);
 	//iSocket = init_socket(ip,port);
 	//if(iSocket <=0) return -2;
 	
@@ -488,6 +538,10 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long xszbmZdh[
 	
 	pThreadPool = threadpool_init(10, 100);
 	
+	pthread_mutex_init(&errInfoLock, NULL);
+	memset(errInfoFile,0,sizeof(errInfoFile));
+	sprintf(errInfoFile,"./%s.sendfail",cDate);
+	iErrInfoHandle = open(errInfoFile,O_WRONLY|O_CREAT);
 	for(ttt=0;ttt<FileLength;ttt++){
 		
 		memset(&strPiao,0,sizeof(strPiao));
@@ -508,6 +562,8 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long xszbmZdh[
 				//printf("lsk zdh:%d\n",strPiao.xszbm);
 		Xszbm8 = xszbmZdh[strPiao.xszbm];
 		
+		sprintf(ywlsh,"23%s%05d%05d",cDate6,strPiao.xszbm,strPiao.lsh % 100000);
+		
 		
 		if(ifLsFs == 1){
 			for(i=0;i<strPiao.tiaoshu;i++){
@@ -518,43 +574,48 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long xszbmZdh[
 					sprintf(Code+strlen(Code),"00&01&%04d&03%02d%02d%02d",strPiao.tz[i*10+6],strPiao.tz[i*10+0],strPiao.tz[i*10+1],strPiao.tz[i*10+2]);
 				if(strcmp(cWf,"lot")==0)
 					sprintf(Code+strlen(Code),"00&01&%04d&06%02d%02d%02d%02d%02d%02d01%02d",
-						strPiao.tz[i],strPiao.tz[i*10+0],strPiao.tz[i*10+1],strPiao.tz[i*10+2],strPiao.tz[i*10+3],strPiao.tz[i*10+4],strPiao.tz[i*10+5],strPiao.tz[i*10+6]);
+						strPiao.tzs / strPiao.tiaoshu,strPiao.tz[i*10+0],strPiao.tz[i*10+1],strPiao.tz[i*10+2],strPiao.tz[i*10+3],strPiao.tz[i*10+4],strPiao.tz[i*10+5],strPiao.tz[i*10+6]);
 				if(strcmp(cWf,"c730")==0)
 					sprintf(Code+strlen(Code),"00&01&%04d&07%02d%02d%02d%02d%02d%02d%02d",
-						strPiao.tz[i],strPiao.tz[i*10+0],strPiao.tz[i*10+1],strPiao.tz[i*10+2],strPiao.tz[i*10+3],strPiao.tz[i*10+4],strPiao.tz[i*10+5],strPiao.tz[i*10+6]);
+						strPiao.tzs / strPiao.tiaoshu,strPiao.tz[i*10+0],strPiao.tz[i*10+1],strPiao.tz[i*10+2],strPiao.tz[i*10+3],strPiao.tz[i*10+4],strPiao.tz[i*10+5],strPiao.tz[i*10+6]);
 				if(strcmp(cWf,"c736")==0)
 					sprintf(Code+strlen(Code),"00&01&%04d&07%02d%02d%02d%02d%02d%02d%02d",
-						strPiao.tz[i],strPiao.tz[i*10+0],strPiao.tz[i*10+1],strPiao.tz[i*10+2],strPiao.tz[i*10+3],strPiao.tz[i*10+4],strPiao.tz[i*10+5],strPiao.tz[i*10+6]);	
+						strPiao.tzs / strPiao.tiaoshu,strPiao.tz[i*10+0],strPiao.tz[i*10+1],strPiao.tz[i*10+2],strPiao.tz[i*10+3],strPiao.tz[i*10+4],strPiao.tz[i*10+5],strPiao.tz[i*10+6]);	
 				if(strcmp(cWf,"c522")==0)
 					sprintf(Code+strlen(Code),"00&01&%04d&05%02d%02d%02d%02d%02d",
-						strPiao.tz[i],strPiao.tz[i*10+0],strPiao.tz[i*10+1],strPiao.tz[i*10+2],strPiao.tz[i*10+3],strPiao.tz[i*10+4]);	
+						strPiao.tzs / strPiao.tiaoshu,strPiao.tz[i*10+0],strPiao.tz[i*10+1],strPiao.tz[i*10+2],strPiao.tz[i*10+3],strPiao.tz[i*10+4]);	
 				if(strcmp(cWf,"p62")==0)
 					sprintf(Code+strlen(Code),"00&01&%04d&06%02d%02d%02d%02d%02d%02d01%02d",
-						strPiao.tz[i],strPiao.tz[i*10+0],strPiao.tz[i*10+1],strPiao.tz[i*10+2],strPiao.tz[i*10+3],strPiao.tz[i*10+4],strPiao.tz[i*10+5],strPiao.tz[i*10+6]);	
+						strPiao.tzs / strPiao.tiaoshu,strPiao.tz[i*10+0],strPiao.tz[i*10+1],strPiao.tz[i*10+2],strPiao.tz[i*10+3],strPiao.tz[i*10+4],strPiao.tz[i*10+5],strPiao.tz[i*10+6]);	
+				
 					
 			}
 					
 			if((strcmp(cWf,"lot")==0)||(strcmp(cWf,"c730")==0))
 			{
-					//新开奖
-					//Xszbm8需要转换,SerialNum需要实现
-				sprintf(xkj,"ND_Region_List$0$1$4020,%s,23,%s,%d,%d,1,%d,%d,,%s,1,,,,,,,,,%s %s,%d.00,,1,1,1,%d,%s$%s$HLJHT%s%03d11111$4",
-				       strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,1,cDate,cTime,strPiao.tzs*2,strPiao.tiaoshu,Code,cTime,cTime,SerialNum++);
-												//THead(sendbuf,Body);	
-												
-				if(strPiao.cpbz==0)
-					sprintf(xkj2,"ND_Region_List$0$1$4020,%s,23,%s,%d,%d,1,%d,%d,,%s,1,,,,,,,,,%s %s,%d.00,,1,1,1,%d,%s$%s$HLJHT%s%03d11111$4",
-				       strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,1,cDate,cTime,strPiao.tzs*2,strPiao.tiaoshu,Code,cTime,cTime,SerialNum++);
-												       
+				if(XKJ_SEND){	
+						//新开奖
+						//Xszbm8需要转换,SerialNum需要实现
+					sprintf(xkj,"ND_Region_List$0$1$4020,%s,23,%s,%d,%d,1,%d,%d,,%d,1,,,,,,,,,%s %s,%d.00,,1,1,1,%d,%s$%s %s$HLJHT%s%03d11111$4",
+					       strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,1,cDate,cTime,strPiao.tzs*2,strPiao.tiaoshu,Code,cDate,cTime,cDatetimeSimple,SerialNum % 1000);
+													//THead(sendbuf,Body);	
+													
+					if(strPiao.cpbz==0)
+						sprintf(xkj2,"ND_Region_List$0$1$4020,%s,23,%s,%d,%d,1,%d,%d,,%d,1,,,,,,,,,%s %s,%d.00,,1,1,1,%d,%s$%s %s$HLJHT%s%03d11111$4",
+					       strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,1,cDate,cTime,strPiao.tzs*2,strPiao.tiaoshu,Code,cDate,cTime,cDatetimeSimple,SerialNum % 1000);
+				}								       
 			}
-					
-			sprintf(rz,"DT_Region_List$0$1$%s,%s,23,%s,%d,%d,1,%d,%d,%d,%d,1,,,,,,,,,%s %s,%d.00,,1,1,1,%d,%s$%s$HLJHT%s%03d11111$8",
-							 "4020",strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,strPiao.lsh,1,cDate,cTime,strPiao.tzs*2,strPiao.tiaoshu,Code,cTime,cTime,SerialNum++);
+			memset(rz,0,sizeof(rz));			
+			sprintf(rz,"DT_Region_List$0$1$%s,%s,23,%s,%d,%d,1,%d,%d,%s,%d,1,,,,,,,,,%s %s,%d.00,,1,1,1,%d,%s$%s %s$HLJHT%s%03d11111$8",
+							 "4020",strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,ywlsh,1,cDate,cTime,strPiao.tzs*2,strPiao.tiaoshu,Code,cDate,cTime,cDatetimeSimple,SerialNum % 1000);
+			
+			memset(rz2,0,sizeof(rz2));	
 			if(strPiao.cpbz==0)		
-				sprintf(rz2,"DT_Region_List$0$1$%s,%s,23,%s,%d,%d,1,%d,%d,%d,%d,1,,,,,,,,,%s %s,%d.00,,1,1,1,%d,%s$%s$HLJHT%s%03d11111$8",
-							 "4020",strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,strPiao.lsh,1,cDate,cTime,strPiao.tzs*2,strPiao.tiaoshu,Code,cTime,cTime,SerialNum++);
+				sprintf(rz2,"DT_Region_List$0$1$%s,%s,23,%s,%d,%d,1,%d,%d,%s,%d,1,,,,,,,,,%s %s,%d.00,,1,1,1,%d,%s$%s %s$HLJHT%s%03d11111$8",
+							 "4020",strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,ywlsh,1,cDate,cTime,strPiao.tzs*2,strPiao.tiaoshu,Code,cDate,cTime,cDatetimeSimple,SerialNum % 1000);
 			
 		}
+			
 		if(ifLsFs == 2){
 			if(strcmp(cWf,"lot")==0)
 		 	{
@@ -612,31 +673,33 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long xszbmZdh[
 			  	
 			if((strcmp(cWf,"lot")==0)||(strcmp(cWf,"c730")==0))
 			{	
-				
-				sprintf(xkj,"ND_Region_List$0$1$%s,%s,23,%s,%d,%d,1,%d,%d,,1,1,,,,,,,,,%s %s,%d.00,,1,1,1,1,%s$%s$HLJHT%s%03d11111$4",
-					   "4020",strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,cDate,cTime,strPiao.tzs*2,Code,cTime,cTime,SerialNum++);
-							//THead(sendbuf,Body);	
-				//printf("xkj=%s\n",xkj);			
-				if(strPiao.cpbz == 0)
-						sprintf(xkj2,"ND_Region_List$0$1$%s,%s,23,%s,%d,%d,1,%d,%d,,1,1,,,,,,,,,%s %s,%d.00,,1,1,1,1,%s$%s$HLJHT%s%03d11111$4",
-					   "4020",strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,cDate,cTime,strPiao.tzs*2,Code,cTime,cTime,SerialNum++);
-				
+				if(XKJ_SEND){
+					sprintf(xkj,"ND_Region_List$0$1$%s,%s,23,%s,%d,%d,1,%d,%d,,1,1,,,,,,,,,%s %s,%d.00,,1,1,1,1,%s$%s %s$HLJHT%s%03d11111$4",
+						   "4020",strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,cDate,cTime,strPiao.tzs*2,Code,cDate,cTime,cDatetimeSimple,SerialNum % 1000);
+								//THead(sendbuf,Body);	
+					//printf("xkj=%s\n",xkj);			
+					if(strPiao.cpbz == 0)
+							sprintf(xkj2,"ND_Region_List$0$1$%s,%s,23,%s,%d,%d,1,%d,%d,,1,1,,,,,,,,,%s %s,%d.00,,1,1,1,1,%s$%s %s$HLJHT%s%03d11111$4",
+						   "4020",strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,cDate,cTime,strPiao.tzs*2,Code,cDate,cTime,cDatetimeSimple,SerialNum % 1000);
+				}
 			}
-									
-			sprintf(rz,"DT_Region_List$0$1$%s,%s,23,%s,%d,%d,1,%d,%d,%d,1,1,,,,,,,,,%s %s,%d.00,,1,1,1,1,%s$%s$HLJHT%s%03d11111$8",
-					  				 "4020",strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,strPiao.lsh,cDate,cTime,strPiao.tzs*2,Code,cTime,cTime,SerialNum++);////
+			memset(rz,0,sizeof(rz));					
+			sprintf(rz,"DT_Region_List$0$1$%s,%s,23,%s,%d,%d,1,%d,%d,%s,1,1,,,,,,,,,%s %s,%d.00,,1,1,1,1,%s$%s %s$HLJHT%s%03d11111$8",
+					  				 "4020",strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,ywlsh,cDate,cTime,strPiao.tzs*2,Code,cDate,cTime,cDatetimeSimple,SerialNum % 1000);////
 			
+			memset(rz2,0,sizeof(rz2));
 			if(strPiao.cpbz==0)
-				sprintf(rz2,"DT_Region_List$0$1$%s,%s,23,%s,%d,%d,1,%d,%d,%d,1,1,,,,,,,,,%s %s,%d.00,,1,1,1,1,%s$%s$HLJHT%s%03d11111$8",
-					  				 "4020",strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,strPiao.lsh,cDate,cTime,strPiao.tzs*2,Code,cTime,cTime,SerialNum++);////
+				sprintf(rz2,"DT_Region_List$0$1$%s,%s,23,%s,%d,%d,1,%d,%d,%s,1,1,,,,,,,,,%s %s,%d.00,,1,1,1,1,%s$%s %s$HLJHT%s%03d11111$8",
+					  				 "4020",strPiao.cpkey,cYxbm,strPiao.xsqh,strPiao.xsqh,strPiao.xsqh,Xszbm8,ywlsh,cDate,cTime,strPiao.tzs*2,Code,cDate,cTime,cDatetimeSimple,SerialNum % 1000);////
 					  				 
-			//printf("rz=%s\n",rz);		  		
+			//printf("rz=%s\n",rz);
+			//printf("rz2=%s\n",rz2);		  		
 		}
 				
+		//return 0;	
 				
-				
-		if(strlen(xkj) > 0){
-			strcpy(CommandID,"REDIS");
+		if(strlen(xkj) > 0 && XKJ_SEND){
+			//sprintf(CommandID,"%s","REDIS");
 					
 			sprintf(Serial,"%ld%04d",time(NULL),SerialNum);
 			SerialNum++;	
@@ -646,88 +709,116 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long xszbmZdh[
 				4+strlen(CommandID)+strlen(Serial)+strlen(xkj),CommandID,Serial,xkj);
 				
 				
-				
+			//fputs(sendbuf,fpSendBack);	
+			//fputs("\n",fpSendBack);
 						
 				//printf("socket send:%s\n",sendbuf);
 				
-				memset(&par_send_content,0,sizeof(par_send_content));
 				
-				par_send_content.ip=ip;	//地址赋值
-				par_send_content.port=port;
-				par_send_content.buff=sendbuf;
-				par_send_content.len = strlen(sendbuf);
+				//memset(par_send_content,0,sizeof(SEND_CONTENT));
+				par_send_content = calloc(1,sizeof(SEND_CONTENT));
+				
+				par_send_content->ip=ip;	//地址赋值
+				par_send_content->port=port;
+				strcpy(par_send_content->buff,sendbuf);
+				par_send_content->len = strlen(sendbuf);
 				
 				i = threadpool_add_job(pThreadPool, sendbuff2, &par_send_content);
+				
+				
 				//i=sendbuff(iSocket,sendbuf, strlen(sendbuf));
 			if(0 > i ){
 				printf("sendbuff error return %d:%s\n",i,sendbuf);
 				continue;
 			}else{
-				printf("recieve:%s\n",par_send_content.recv);
+				printf("recieve:%s\n",par_send_content->recv);
 			}
 		}
 		
-		if(strlen(xkj2) > 0){
-			strcpy(CommandID,"REDIS");
+		if(strlen(xkj2) > 0 && XKJ_SEND){
+			//sprintf(CommandID,"%s","REDIS");
 					
 			sprintf(Serial,"%ld%04d",time(NULL),SerialNum);
 			SerialNum++;	
 					//if((SerialNum>=1000)||(SerialNum<0))	SerialNum=0;
 			memset(sendbuf,0,sizeof(sendbuf));	
+			
 			sprintf(sendbuf,"@%04d|1|%s|%s|%s",
 				4+strlen(CommandID)+strlen(Serial)+strlen(xkj2),CommandID,Serial,xkj2);
 				
 				
-				
-						
+			//fputs(sendbuf,fpSendBack);	
+			//fputs("\n",fpSendBack);			
 				//printf("socket send:%s\n",sendbuf);
 				
-				memset(&par_send_content,0,sizeof(par_send_content));
+				par_send_content = calloc(1,sizeof(SEND_CONTENT));
 				
-				par_send_content.ip=ip;	//地址赋值
-				par_send_content.port=port;
-				par_send_content.buff=sendbuf;
-				par_send_content.len = strlen(sendbuf);
+				par_send_content->ip=ip;	//地址赋值
+				par_send_content->port=port;
+				strcpy(par_send_content->buff,sendbuf);
+				par_send_content->len = strlen(sendbuf);
 				
 				i = threadpool_add_job(pThreadPool, sendbuff2, &par_send_content);
+				
+				
+				
+				
 				//i=sendbuff(iSocket,sendbuf, strlen(sendbuf));
 			if(0 > i ){
 				printf("sendbuff error return %d:%s\n",i,sendbuf);
 				continue;
 			}else{
-				printf("recieve:%s\n",par_send_content.recv);
+				printf("recieve:%s\n",par_send_content->recv);
 			}
 		}
 				
 		if(strlen(rz) > 0){
-			strcpy(CommandID,"REDIS");
+//			printf("commandid_before:%s\n",CommandID);
+//			//sprintf(CommandID,"%s","REDIS");
+//			memset(CommandID,0,sizeof(CommandID));
+//			printf("commandid_midd:%s\n",CommandID);
+//			strcpy(CommandID,"REDIS");
 					
-			sprintf(Serial,"%ld%04d",time(NULL),SerialNum);
-			SerialNum++;	
-					
+			sprintf(Serial,"%ld%04d",time(NULL),iSeriaNum++);
+			if(iSeriaNum > 9999) iSeriaNum = 0;
+			//SerialNum++;	
+				
 			memset(sendbuf,0,sizeof(sendbuf));	
 			sprintf(sendbuf,"@%04d|1|%s|%s|%s",
 				4+strlen(CommandID)+strlen(Serial)+strlen(rz),CommandID,Serial,rz);
+			
+		//	printf("rz:%s\n",sendbuf);
+			//fputs(sendbuf,fpSendBack);	
+			//readSize = fwrite(sendbuf,strlen(sendbuf),1,fpSendBack);
+			
+			write(ifdSendBack,sendbuf,strlen(sendbuf));
+			write(ifdSendBack,"\r\n",strlen("\r\n"));
+			//printf("fwrite handle=%d return %d:%s\n",fpSendBack,readSize,strerror(errno));
+			//fwrite("\n",1,1,fpSendBack);
+		//	fprintf(fpSendBack,"%s\n",sendbuf);
+			
+			par_send_content = calloc(1,sizeof(SEND_CONTENT));
 				
-
-			par_send_content.ip=ip;	//地址赋值
-			par_send_content.port=port;
-			par_send_content.buff=sendbuf;
-			par_send_content.len = strlen(sendbuf);
+				par_send_content->ip=ip;	//地址赋值
+				par_send_content->port=port;
+				strcpy(par_send_content->buff,sendbuf);
+				par_send_content->len = strlen(sendbuf);
 				
-			i = threadpool_add_job(pThreadPool, sendbuff2, &par_send_content);
+				i = threadpool_add_job(pThreadPool, sendbuff2, par_send_content);
+				
+				
 			
 			if(0 > i){
 				printf("sendbuff error return %d:%s\n",i,sendbuf);
 				continue;
 			}else{
-				printf("recieve:%s\n",par_send_content.recv);
+				//printf("recieve:%s\n",par_send_content.recv);
 				
 			}
 		}
 		
 		if(strlen(rz2) > 0){
-			strcpy(CommandID,"REDIS");
+			//sprintf(CommandID,"%s","REDIS");
 					
 			sprintf(Serial,"%ld%04d",time(NULL),SerialNum);
 			SerialNum++;	
@@ -735,20 +826,25 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long xszbmZdh[
 			memset(sendbuf,0,sizeof(sendbuf));	
 			sprintf(sendbuf,"@%04d|1|%s|%s|%s",
 				4+strlen(CommandID)+strlen(Serial)+strlen(rz2),CommandID,Serial,rz2);
-				
+			//printf("rz,file=%s:%s\n",piaoFile,sendbuf);
+			//fputs(sendbuf,fpSendBack);	
+			//fputs("\n",fpSendBack);
 
-			par_send_content.ip=ip;	//地址赋值
-			par_send_content.port=port;
-			par_send_content.buff=sendbuf;
-			par_send_content.len = strlen(sendbuf);
+			par_send_content = calloc(1,sizeof(SEND_CONTENT));
 				
-			i = threadpool_add_job(pThreadPool, sendbuff2, &par_send_content);
-			
+				par_send_content->ip=ip;	//地址赋值
+				par_send_content->port=port;
+				strcpy(par_send_content->buff,sendbuf);
+				par_send_content->len = strlen(sendbuf);
+				
+				i = threadpool_add_job(pThreadPool, sendbuff2, &par_send_content);
+				
+				
 			if(0 > i){
 				printf("sendbuff error return %d:%s\n",i,sendbuf);
 				continue;
 			}else{
-				printf("recieve:%s\n",par_send_content.recv);
+				printf("recieve:%s\n",par_send_content->recv);
 				
 			}
 		}
@@ -756,8 +852,13 @@ unsigned long sendXkjRz(char* piaoFile,char *ip,unsigned int port,long xszbmZdh[
 				
 	}
 	threadpool_destroy(pThreadPool);
-	
+	pthread_mutex_destroy(&errInfoLock);
 	if(fp) fclose(fp);	
+	if(ifdSendBack) close(ifdSendBack);
+	if(iErrInfoHandle) close(iErrInfoHandle);		
+	//if(fpSendBack) fclose(fpSendBack);
+		
+	return ttt;	
 }
 
 

@@ -5,6 +5,7 @@
 #include<arpa/inet.h>
 #include<string.h>
 #include<unistd.h>
+#include <fcntl.h>
 #include<stdbool.h>
 #include<errno.h>
 #ifndef ZCSEND
@@ -14,10 +15,14 @@
 #define CICS_REDIS_CMD					"REDIS"
 #define CICS_MAIN_DB2						1
 
+pthread_mutex_t errInfoLock;
+int iErrInfoHandle;
+char errInfoFile[1024];
+
 typedef struct sendcontent_{
 	char* ip;
 	int   port;
-	char* buff;
+	char buff[2048];
 	int   len;
 	char recv[2048];
 	int   recv_len;

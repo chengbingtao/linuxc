@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "threadpool.h"
 //#include "work.h"
+
 //#define NDEBUG
 #include <assert.h>
 struct my_threadpool* threadpool_init(int thread_num, int queue_max_num)
@@ -62,6 +63,7 @@ struct my_threadpool* threadpool_init(int thread_num, int queue_max_num)
 
 int threadpool_add_job(struct my_threadpool* pool, void (*callback_function)(void *arg), void *arg)
 {
+	
     assert(pool != NULL);
     assert(callback_function != NULL);
     assert(arg != NULL);
@@ -84,6 +86,7 @@ int threadpool_add_job(struct my_threadpool* pool, void (*callback_function)(voi
     } 
     pjob->callback_function = callback_function;    
     pjob->arg = arg;
+    
     pjob->next = NULL;
     if (pool->head == NULL)   
     {
@@ -104,6 +107,8 @@ void* threadpool_function(void* arg)
 {
     struct my_threadpool *pool = (struct my_threadpool*)arg;
     struct job *pjob = NULL;
+   
+    
     while (1)  //死循环
     {
         pthread_mutex_lock(&(pool->mutex));
@@ -117,6 +122,8 @@ void* threadpool_function(void* arg)
             pthread_exit(NULL);
         }
     //printf("threadpool_function 111\n");
+    		
+    
         pool->queue_cur_num--;
         pjob = pool->head;
         if (pool->queue_cur_num == 0)
@@ -141,8 +148,14 @@ void* threadpool_function(void* arg)
         pthread_mutex_unlock(&(pool->mutex));
     //printf("threadpool_function 555\n");
         
+       
         (*(pjob->callback_function))(pjob->arg);   //线程真正要做的工作，回调函数的调用
+        //printf("thread buf callafter:%s\n",psc->buff);
    // printf("threadpool_function 666\n");
+   			
+   			//添加：成炳涛2020年7月8日，测试参数传递，参数在循环中产生的话，必须malloc，否则每次地址相同，所以在此处free
+   			free(pjob->arg);
+   			
         free(pjob);
         pjob = NULL;    
     }
